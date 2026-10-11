@@ -49,6 +49,7 @@ public sealed record ConfigPolicyVerification(
 internal sealed class ConfigPolicySignatureService(
     MainConfigHandler configHandler,
     SecuritySettingsStore settingsStore,
+    SecRandom.Core.Abstraction.Services.IProfileCatalogManager profileCatalogManager,
     ILogger<ConfigPolicySignatureService> logger)
 {
     private EventHandler? _policyChanged;
@@ -86,6 +87,34 @@ internal sealed class ConfigPolicySignatureService(
 
     private static string DocumentPath => Utils.GetFilePath("config", DocumentFileName);
 
+    /// <summary>
+    ///     名单覆盖是可选项（<c>ConfigIntegrityIncludeRosters</c>），默认关闭：覆盖名单意味着任何一次
+    ///     增删改名都会让签名失效，那是必须显式选择的代价。覆盖的是身份映射（学生的学号/姓名/分组/性别/
+    ///     停用，奖品的编号与名称），不含奖品权重与库存——它们是主持人日常会调整的抽取输入，理由见
+    ///     <see cref="RosterPolicyDigest" />。没有任何名单时 <c>Combine</c> 仍返回真实摘要，所以
+    ///     「开着但还没有名单」与「关着」不会长得一样。
+    /// </summary>
+    private string? ComputeRosterDigest()
+    {
+        if (!settingsStore.Data.ConfigIntegrityIncludeRosters)
+            return null;
+
+        var digests = new System.Collections.Generic.List<string>();
+        foreach (var name in profileCatalogManager.GetStudentListNames())
+        {
+            if (profileCatalogManager.LoadStudentList(name) is { } list)
+                digests.Add(RosterPolicyDigest.ComputeList(list));
+        }
+
+        foreach (var name in profileCatalogManager.GetPrizeListNames())
+        {
+            if (profileCatalogManager.LoadPrizeList(name) is { } list)
+                digests.Add(RosterPolicyDigest.ComputeList(list));
+        }
+
+        return RosterPolicyDigest.Combine(digests);
+    }
+
     public ConfigPolicyVerification Verify()
     {
         if (settingsStore.Data.ConfigIntegrityMode != ConfigIntegrityMode.SignedPolicy)
@@ -117,7 +146,7 @@ internal sealed class ConfigPolicySignatureService(
         }
 
         var fingerprint = ConfigSignature.Fingerprint(document.PublicKey);
-        var digest = ConfigPolicyDigest.Compute(configHandler.Data, settingsStore.Data);
+        var digest = ConfigPolicyDigest.Compute(configHandler.Data, settingsStore.Data, ComputeRosterDigest());
         if (!ConfigSignature.Verify(digest, document.Signature, document.PublicKey))
         {
             logger.LogWarning(
@@ -149,7 +178,7 @@ internal sealed class ConfigPolicySignatureService(
         ArgumentException.ThrowIfNullOrWhiteSpace(privateKeyPkcs8Base64);
 
         var publicKey = ConfigSignature.PublicKeyFromPrivateKey(privateKeyPkcs8Base64);
-        var digest = ConfigPolicyDigest.Compute(configHandler.Data, settingsStore.Data);
+        var digest = ConfigPolicyDigest.Compute(configHandler.Data, settingsStore.Data, ComputeRosterDigest());
         var document = new ConfigSignatureDocument
         {
             Scope = ConfigPolicyDigest.ScopeId,

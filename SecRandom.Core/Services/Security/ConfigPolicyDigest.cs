@@ -25,14 +25,18 @@ public static class ConfigPolicyDigest
 
     /// <summary>
     ///     Security fields that describe the integrity check itself. Covering them would make switching the
-    ///     check on or off invalidate the very signature that verifies it.
+    ///     check on or off invalidate the very signature that verifies it. The roster-coverage switch belongs
+    ///     here too: whether rosters are covered is already recorded by the <c>rosters</c> key's presence, so
+    ///     hashing the switch as well would only lock the operator out of a control they must be able to flip
+    ///     before re-signing.
     /// </summary>
     private static readonly string[] SelfReferentialFieldNames =
     [
         "SettingsIntegrityCheckEnabled",
         "SettingsIntegrityAction",
         "SettingsIntegrityRestoreSource",
-        "ConfigIntegrityMode"
+        "ConfigIntegrityMode",
+        "ConfigIntegrityIncludeRosters"
     ];
 
     private static readonly JsonSerializerOptions SerializerOptions = new()

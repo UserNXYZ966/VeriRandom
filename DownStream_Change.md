@@ -726,3 +726,21 @@
 
 ---
 
+## 23. 分离签名覆盖名单（§17 的接线）
+
+**变更**：`ConfigPolicySignatureService` 现在真的把**名单摘要**喂给 `ConfigPolicyDigest.Compute`（`Sign()` 与 `Verify()` 两个调用点都补上第三个参数）。此前该参数一直省略，`RosterPolicyDigest` 因此写好了却零引用。服务新增第四个构造参数 `IProfileCatalogManager`（只经 DI 构造，全仓无手工构造点）。
+
+**覆盖什么**：只有**身份映射**——学生的学号/姓名/分组/性别/停用，奖品的编号与名称。**不含**奖品权重与库存，也不含学生权重（学生记录根本没有权重字段）。由 `SecuritySettingsConfig.ConfigIntegrityIncludeRosters` 控制，**默认关闭**：打开意味着任何一次增删改名都会让签名失效，那必须是显式选择。
+
+**「要不要覆盖名单」这件事本身由 `rosters` 键的存在来记录**，而不是由开关字段记录（`ConfigPolicyDigest.Compute` 只在 `rosterDigest` 非空时写入该键）。由此：
+- 打开覆盖会改变摘要 → 旧签名立刻失效。这正是要的：不能靠关掉开关悄悄缩小范围
+- 名单为空时 `RosterPolicyDigest.Combine([])` 仍返回真实摘要，所以「开着但还没有名单」与「关着」不会长得一样
+- 因此 `ConfigIntegrityIncludeRosters` 被加进 `SelfReferentialFieldNames`：**必须**排除在投影之外，否则开启后这个开关会被自己的策略锁住，操作员再也翻不回来（与完整性模式、篡改动作、恢复源同一类自指字段）
+
+**还没做（下一步，别丢）**：
+1. 安全设置页缺一个「覆盖名单」开关与三语文案，现在只能改配置文件才能打开——这就是之前登记的「`IncludeRosters` UI 开关」缺口
+2. 名单被覆盖后**列表页的编辑不会被锁**（`ConfigPolicyLock` 只锁设置页控件）。这是有意的：锁只是防误操作的示能，真正的强制是摘要不符时由启动闸门拦下。但设置页文案必须写明「改动名单会让签名失效、需要重新签发」
+3. `RosterPolicyDigest` 经 `IProfileCatalogManager.Load*` 读名单，而该方法在**数据需要规范化时会顺手写回**（补 RecordId、应用排序）。规范化幂等且确定，所以第一次之后不再写盘、两侧摘要也一致；但若将来把摘要算进抽取热路径，这一点会被放大
+
+---
+
