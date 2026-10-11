@@ -24,8 +24,10 @@ using SecRandom.Core.Models.Draw;
 using SecRandom.Core.Models.SubConfigs;
 using SecRandom.Core.Models.SubConfigs.Picking;
 using SecRandom.Core.Services.Config;
+using SecRandom.Core.Services.ControlNode;
 using SecRandom.Core.Services.Draw;
 using SecRandom.Helpers;
+using SecRandom.Services.ControlNode;
 using SecRandom.Services.Draw;
 using SecRandom.Services.Linkage;
 using SecRandom.Services.Notification;
@@ -47,6 +49,7 @@ public sealed partial class RollCallPageViewModel : ViewModelBase, IDisposable
 
     private readonly DrawEngine _drawEngine;
     private readonly IProfileService _profileService;
+    private readonly IProfileCatalogManager _profileCatalogManager;
     private readonly IDrawTemporaryRecordService _temporaryRecordService;
     private readonly IDrawCommitService _drawCommitService;
     private readonly IVoiceAnnouncementService? _voiceAnnouncementService;
@@ -81,6 +84,7 @@ public sealed partial class RollCallPageViewModel : ViewModelBase, IDisposable
         MainConfigHandler configHandler,
         DrawEngine drawEngine,
         IProfileService profileService,
+        IProfileCatalogManager profileCatalogManager,
         IDrawTemporaryRecordService temporaryRecordService,
         IDrawCommitService drawCommitService,
         ILogger<RollCallPageViewModel> logger,
@@ -96,6 +100,7 @@ public sealed partial class RollCallPageViewModel : ViewModelBase, IDisposable
         _configHandler = configHandler;
         _drawEngine = drawEngine;
         _profileService = profileService;
+        _profileCatalogManager = profileCatalogManager;
         _temporaryRecordService = temporaryRecordService;
         _drawCommitService = drawCommitService;
         _logger = logger;
@@ -132,6 +137,16 @@ public sealed partial class RollCallPageViewModel : ViewModelBase, IDisposable
     public ObservableCollection<RollCallResultItem> ResultItems { get; } = [];
     public ObservableCollection<RollCallRemainingItem> RemainingItems { get; } = [];
 
+    /// <summary>Students of the most recent draw, exposed so plugins can present the result themselves.</summary>
+    public IReadOnlyList<Student> LastResultStudents => _lastResultStudents;
+
+    /// <summary>
+    ///     上一次结果的展示文本（按「显示格式」把编号和名称拼好），暴露给插件，
+    ///     让插件牌面上的字和主程序内置结果卡完全一致。
+    /// </summary>
+    public IReadOnlyList<string> LastResultDisplayTitles =>
+        _lastResultStudents.Select(FormatStudent).ToArray();
+
     public MoreSettingsConfig MoreSettings => Config.MoreSettings;
     public bool IsControlPanelOnLeft => MoreSettings.RollCallControlPanelPosition == RollCallControlPanelPosition.Left;
     public bool IsControlPanelOnRight => !IsControlPanelOnLeft;
@@ -151,6 +166,7 @@ public sealed partial class RollCallPageViewModel : ViewModelBase, IDisposable
     public bool IsResultCardStyle => DisplaySettings.DisplayStyle == DisplayStyleMode.Card;
     public bool AnimationEnabled => AnimationSettings.Animation != AnimationMode.NoAnimation;
     public DrawAnimationStyleMode AnimationStyle => AnimationSettings.AnimationStyle;
+    public string PluginAnimationId => AnimationSettings.PluginAnimationId;
     public int AnimationDuration => 250;
     public int PreviewAnimationDuration => AnimationSettings.Animation == AnimationMode.AutoPlay
         ? Math.Clamp(AnimationSettings.AnimationInterval, 1, 10000)
@@ -258,9 +274,22 @@ public sealed partial class RollCallPageViewModel : ViewModelBase, IDisposable
         ResetDrawHistoryCore(showToast: true);
     }
 
+    /// <summary>远程重置的非交互闸门：需要本机验证时返回拒绝，由调用方回给控制台/手机。</summary>
+    public RemoteDrawOutcome? EvaluateRemoteReset() =>
+        ControlDrawGateRejections.From(_linkageDrawCoordinator.EvaluateGate(SecurityOperation.RollCallReset));
+
+    /// <summary>
+    ///     集控远程重置的**展示态**清理：等价于在本地点一次"重置"，但不弹任何验证框。
+    /// </summary>
+    /// <remarks>
+    ///     复用 <see cref="ResetDrawHistoryCore" /> 这条既有路径（清结果区、隐藏结果、恢复提示语、
+    ///     刷新剩余/候选计数），而不是另写一套"只清数据"的逻辑——只清数据的话，教室里看到的
+    ///     还是上一轮抽到的那个人，看起来就像重置没生效。闸门由调用方在此之前判定。
+    /// </remarks>
+    public void ResetRemotePresentation() => ResetDrawHistoryCore(showToast: false);
+
     private void ResetDrawHistoryCore(bool showToast = false)
-    {
-        _lastResultStudents.Clear();
+    {        _lastResultStudents.Clear();
         ResultItems.Clear();
         _rollCallDrawService.Reset(CurrentGroupScope, CurrentGenderScope);
         IsResultVisible = false;
@@ -392,6 +421,83 @@ public sealed partial class RollCallPageViewModel : ViewModelBase, IDisposable
             _ = StartDrawCoreAsync();
             return Task.CompletedTask;
         });
+
+    /// <summary>
+    ///     集控 / 手机端远程点名：指定名单与条件抽一次，结果留在这一页上给课堂看。
+    /// </summary>
+    /// <remarks>
+    ///     <para>
+    ///         与本地抽取走**同一条**路径（同一份候选池、同一套重复规则、同一个事务提交）：
+    ///         远程只是"替老师按了按钮"，不是第二条抽取实现。差别只在三处：条件由载荷指定、
+    ///         先做无交互闸门判定、结果回执要带上抽到了谁。
+    ///     </para>
+    ///     <para>
+    ///         名单存在性用 <see cref="IProfileCatalogManager.LoadStudentList" /> 判定：
+    ///         它读的是**不切换活动档案**的快照，所以"名单不存在/条件不成立"这些拒绝
+    ///         不会在拒绝之前先把教室机的页面切到别的名单上。
+    ///     </para>
+    ///     <para>
+    ///         条件校验在切换之前完成（<see cref="ControlDrawConditions.TryResolve" />），
+    ///         通过之后才切名单与筛选条件——切过去就意味着这台机器接下来的点名都在这条名单上，
+    ///         一个注定被拒绝的命令不该留下这个副作用。
+    ///     </para>
+    ///     <para>
+    ///         这里**不弹交互式验证**：手机那头没人能替教室机输密码。先问 <c>EvaluateGate</c>，
+    ///         需要本机验证时直接拒绝，控制台/手机看到"设备拒绝"而不是一条挂住的命令。
+    ///     </para>
+    /// </remarks>
+    public async Task<RemoteDrawOutcome> StartRemoteDrawAsync(
+        ControlDrawTriggerRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        SecurityOperation[] operations = [SecurityOperation.RollCallStart, SecurityOperation.LinkageAction];
+        if (ControlDrawGateRejections.From(_linkageDrawCoordinator.EvaluateGate(operations)) is { } rejection)
+            return rejection;
+
+        if (IsDrawing)
+            return RemoteDrawOutcome.Busy();
+
+        RefreshLists();
+        var listName = request.ListName ?? SelectedStudentListName;
+        if (string.IsNullOrWhiteSpace(listName) || !StudentListNames.Contains(listName))
+            return RemoteDrawOutcome.Invalid("invalid_value:list_name:not_found");
+
+        var members = _profileCatalogManager.LoadStudentList(listName)?.Students;
+        if (members is null || members.Count == 0)
+            return RemoteDrawOutcome.Invalid("invalid_value:list_name:no_candidate");
+
+        if (!ControlDrawConditions.TryResolve(members, request, out _, out var reason))
+            return RemoteDrawOutcome.Invalid(reason);
+
+        // 切换页面选择与共享档案：抽取用的候选池取自共享档案，只改页面选择会抽到上一次的名单。
+        if (string.Equals(SelectedStudentListName, listName, StringComparison.Ordinal))
+            _profileService.LoadStudentProfile(listName);
+        else
+            SelectedStudentListName = listName;
+
+        SelectedGender = request.Gender ?? AllGendersOption;
+        SelectedGroup = request.Group ?? AllGroupsOption;
+        RefreshCounts();
+        DrawCount = request.Count ?? 1;
+
+        if (!CanStartDraw)
+            return RemoteDrawOutcome.Invalid("invalid_value:list_name:no_candidate");
+
+        // 抽完才换引用：失败路径不清空上一轮结果，因此不能用"结果非空"判断这次是否成功。
+        var previousResult = _lastResultStudents;
+        var authorized = await _linkageDrawCoordinator.AuthorizeAsync(operations, StartDrawCoreAsync, cancellationToken)
+            .ConfigureAwait(true);
+
+        if (!authorized)
+            return RemoteDrawOutcome.Denied("local_verification_required");
+
+        if (ReferenceEquals(previousResult, _lastResultStudents) || _lastResultStudents.Count == 0)
+            return RemoteDrawOutcome.Denied("no_candidate");
+
+        return RemoteDrawOutcome.DrawnFrom(ControlDrawnMembers.FromStudents(_lastResultStudents), listName);
+    }
 
     public Task ToggleDrawFromShortcutAsync() => StartDrawAsync();
 
@@ -794,7 +900,8 @@ public sealed partial class RollCallPageViewModel : ViewModelBase, IDisposable
             image,
             StudentImageSettings.StudentImage,
             StudentImageSettings.StudentImagePosition,
-            AvatarInitialResolver.Resolve(student.Name, student.Id));
+            AvatarInitialResolver.Resolve(student.Name, student.Id),
+            StudentImageSettings.StudentImageSize);
     }
 
     private RollCallRemainingItem CreateRemainingItem(Student student)
@@ -883,14 +990,7 @@ public sealed partial class RollCallPageViewModel : ViewModelBase, IDisposable
         if (settings is not { IsAttachSettingsEnabled: true } || string.IsNullOrWhiteSpace(settings.ImagePath))
             return null;
 
-        try
-        {
-            return File.Exists(settings.ImagePath) ? new Bitmap(settings.ImagePath) : null;
-        }
-        catch
-        {
-            return null;
-        }
+        return DrawImageCache.Load(settings.ImagePath);
     }
 
     private Task PlayAnimationMusicAsync(string animationMusic)
@@ -971,10 +1071,12 @@ public sealed record RollCallResultItem(
     Bitmap? Image,
     bool IsImageEnabled,
     StudentImagePositionMode ImagePosition,
-    string Initial)
+    string Initial,
+    int ImageSize)
 {
     public bool IsImageVisible => IsImageEnabled && Image is not null;
     public bool IsPlaceholderVisible => IsImageEnabled && Image is null;
+    public double InitialFontSize => ImageSize * 0.5;
     public Orientation ImageLayoutOrientation => ImagePosition is StudentImagePositionMode.Left or StudentImagePositionMode.Right
         ? Orientation.Horizontal
         : Orientation.Vertical;

@@ -39,7 +39,7 @@ public partial class SecuritySettingsPage : UserControl, INotifyPropertyChanged
 
     public SecuritySettingsPage()
     {
-        Settings = ViewModel.Config.SecuritySettings;
+        Settings = IAppHost.GetService<SecuritySettingsStore>().Data;
         SudoModeDurationValue = Settings.SudoModeDurationSeconds;
         FactorOptions =
         [
@@ -89,10 +89,12 @@ public partial class SecuritySettingsPage : UserControl, INotifyPropertyChanged
     public bool CanEnableSecurity { get; private set; }
     public bool IsSecurityEnabled { get; private set; }
     public bool HasPassword { get; private set; }
+    public bool HasTotp { get; private set; }
     public bool CanSetPassword => !HasPassword;
     public bool CanConfigureAdditionalFactors { get; private set; }
     public bool CanEditFactorSelection { get; private set; }
     public bool CanEditProtectedOperations { get; private set; }
+    public bool CanEditSudoModeDuration => CanEditProtectedOperations && Settings.SudoModeEnabled;
     public string TotpButtonText { get; private set; } = SR.C_SetTotp;
     public bool IsLockedOut { get; private set; }
     public string LockoutText { get; private set; } = string.Empty;
@@ -104,7 +106,7 @@ public partial class SecuritySettingsPage : UserControl, INotifyPropertyChanged
         remove => NotifyPropertyChanged -= value;
     }
 
-    private MainConfigHandler ConfigHandler { get; } = IAppHost.GetService<MainConfigHandler>();
+    private SecuritySettingsStore SettingsStore { get; } = IAppHost.GetService<SecuritySettingsStore>();
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
@@ -165,7 +167,7 @@ public partial class SecuritySettingsPage : UserControl, INotifyPropertyChanged
     private void SettingsOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (_refreshing) return;
-        ConfigHandler.Save();
+        SettingsStore.Save();
         RefreshSecurityState();
     }
 
@@ -178,6 +180,7 @@ public partial class SecuritySettingsPage : UserControl, INotifyPropertyChanged
             CanEnableSecurity = state.HasPassword;
             IsSecurityEnabled = state.SecurityEnabled;
             HasPassword = state.HasPassword;
+            HasTotp = state.HasTotp;
             CanConfigureAdditionalFactors = state.CanConfigureAdditionalFactors;
             CanEditFactorSelection = state.CanEditFactorSelection;
             CanEditProtectedOperations = state.CanEditProtectedOperations;
@@ -186,6 +189,7 @@ public partial class SecuritySettingsPage : UserControl, INotifyPropertyChanged
             LockoutText = state.LockoutRemaining is { } remaining
                 ? string.Format(SR.M_LockoutFormat, Math.Ceiling(remaining.TotalSeconds))
                 : string.Empty;
+            SudoModeDurationValue = Settings.SudoModeDurationSeconds;
             // 配置可能被手工改写成未知枚举值，这里回退到默认项而不是让下拉框绑定抛异常
             SelectedIntegrityActionOption = IntegrityActionOptions
                 .FirstOrDefault(option => option.Value == Settings.SettingsIntegrityAction) ?? IntegrityActionOptions[0];
@@ -203,8 +207,10 @@ public partial class SecuritySettingsPage : UserControl, INotifyPropertyChanged
             foreach (var name in new[]
                      {
                           nameof(CanEnableSecurity), nameof(IsSecurityEnabled), nameof(HasPassword), nameof(CanSetPassword),
+                          nameof(HasTotp),
                           nameof(CanConfigureAdditionalFactors), nameof(CanEditFactorSelection), nameof(CanEditProtectedOperations),
                           nameof(TotpButtonText), nameof(IsLockedOut), nameof(LockoutText),
+                          nameof(SudoModeDurationValue), nameof(CanEditSudoModeDuration),
                           nameof(SelectedIntegrityActionOption), nameof(SelectedIntegrityRestoreSourceOption),
                           nameof(IsAutoRestoreSelected),
                           nameof(SelectedSignedPolicyModeOption), nameof(SignedPolicyFingerprint),
@@ -452,6 +458,17 @@ public partial class SecuritySettingsPage : UserControl, INotifyPropertyChanged
         RefreshSecurityState();
     }
 
+    private async void RemoveTotp_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (TopLevel.GetTopLevel(this) is not { } xamlRoot) return;
+        _refreshing = true;
+        var removed = await _securityService.RemoveTotpAsync(xamlRoot);
+        _refreshing = false;
+        if (removed) this.ShowSuccessToast(SR.M_TotpRemoved);
+        else this.ShowErrorToast(SR.M_TotpRemoveFailed);
+        RefreshSecurityState();
+    }
+
     private async void ManageUsb_OnClick(object? sender, RoutedEventArgs e)
     {
         if (TopLevel.GetTopLevel(this) is not { } xamlRoot) return;
@@ -466,16 +483,30 @@ public partial class SecuritySettingsPage : UserControl, INotifyPropertyChanged
         RefreshSecurityState();
     }
 
-    private void SudoModeDuration_OnValueChanged(object? sender, NumericUpDownValueChangedEventArgs e)
+    private async void SudoModeDuration_OnValueChanged(object? sender, NumericUpDownValueChangedEventArgs e)
     {
-        if (_refreshing)
+        if (_refreshing || e.NewValue is not { } newValue)
             return;
 
-        if (e.NewValue is { } newValue && (int)newValue != Settings.SudoModeDurationSeconds)
+        var requested = (int)newValue;
+        if (requested == Settings.SudoModeDurationSeconds)
+            return;
+
+        if (TopLevel.GetTopLevel(this) is not { } xamlRoot)
         {
-            Settings.SudoModeDurationSeconds = (int)newValue;
-            ConfigHandler.Save();
+            RefreshSecurityState();
+            return;
         }
+
+        // 放宽免验证时长属于放宽防护，和其余安全项一样走受验证保护的写入边界
+        await ApplySecuritySettingsUpdateAsync(
+            xamlRoot,
+            () => Settings.SudoModeDurationSeconds = requested,
+            () =>
+            {
+                SudoModeDurationValue = Settings.SudoModeDurationSeconds;
+                NotifyPropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SudoModeDurationValue)));
+            });
     }
 
     private async Task ApplySecuritySettingsUpdateAsync(TopLevel xamlRoot, Action update, Action restoreView)
@@ -508,6 +539,10 @@ public partial class SecuritySettingsPage : UserControl, INotifyPropertyChanged
     {
         switch (optionName)
         {
+            case nameof(SecuritySettingsConfig.SudoModeEnabled):
+                getValue = () => Settings.SudoModeEnabled;
+                setValue = value => Settings.SudoModeEnabled = value;
+                return true;
             case nameof(SecuritySettingsConfig.RequireAllSelectedFactors):
                 getValue = () => Settings.RequireAllSelectedFactors;
                 setValue = value => Settings.RequireAllSelectedFactors = value;

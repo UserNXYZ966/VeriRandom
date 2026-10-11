@@ -22,6 +22,7 @@ using SecRandom.Core.Services.Config;
 using SecRandom.Services.Consent;
 using SecRandom.Services.FirstRun;
 using SecRandom.Core.Services.Archive;
+using SecRandom.Helpers;
 using SecRandom.Services.ImportExport;
 using SecRandom.ViewModels;
 using LR = SecRandom.Langs.FirstRunOobe.Resources;
@@ -104,7 +105,7 @@ public partial class FirstRunOobeWindow : FAAppWindow
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
-        if (App.IsMicaSupported)
+        if (App.IsMicaSupported && UiMotion.UseWindowCompositionEffects)
         {
             TransparencyLevelHint = [WindowTransparencyLevel.Mica];
             Background = Brushes.Transparent;

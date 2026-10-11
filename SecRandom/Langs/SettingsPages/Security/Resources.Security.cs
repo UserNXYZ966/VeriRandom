@@ -59,6 +59,7 @@ public partial class Resources
     public static string C_ChangePassword => Text(nameof(C_ChangePassword));
     public static string C_SetTotp => Text(nameof(C_SetTotp));
     public static string C_ResetTotp => Text(nameof(C_ResetTotp));
+    public static string C_RemoveTotp => Text(nameof(C_RemoveTotp));
     public static string C_OpenSettings => Text(nameof(C_OpenSettings));
     public static string C_AllowSettingsPreview => Text(nameof(C_AllowSettingsPreview));
     public static string C_ToggleMainWindow => Text(nameof(C_ToggleMainWindow));
@@ -145,12 +146,21 @@ public partial class Resources
     public static string M_SetPasswordFirst => Text(nameof(M_SetPasswordFirst));
     public static string M_TotpSaved => Text(nameof(M_TotpSaved));
     public static string M_TotpSaveFailed => Text(nameof(M_TotpSaveFailed));
+    public static string M_TotpRemoved => Text(nameof(M_TotpRemoved));
+    public static string M_TotpRemoveFailed => Text(nameof(M_TotpRemoveFailed));
     public static string M_UsbUpdated => Text(nameof(M_UsbUpdated));
     public static string M_UsbUpdateFailed => Text(nameof(M_UsbUpdateFailed));
     public static string M_Copied => Text(nameof(M_Copied));
-    public static string S_SudoModeDuration => Text(nameof(S_SudoModeDuration));
-    public static string S_SudoModeDuration_D => Text(nameof(S_SudoModeDuration_D));
-    public static string S_SudoModeDurationUnit => Text(nameof(S_SudoModeDurationUnit));
+    public static string S_SudoMode => Text(nameof(S_SudoMode));
+    public static string S_SudoMode_D => Text(nameof(S_SudoMode_D));
+    public static string S_SudoMode_Enabled => Text(nameof(S_SudoMode_Enabled));
+    public static string S_SudoMode_Enabled_D => Text(nameof(S_SudoMode_Enabled_D));
+    public static string S_SudoMode_Duration => Text(nameof(S_SudoMode_Duration));
+    public static string S_SudoMode_Duration_D => Text(nameof(S_SudoMode_Duration_D));
+    public static string C_SudoModeDurationUnit => Text(nameof(C_SudoModeDurationUnit));
+    public static string C_SudoMode_OperationScope => Text(nameof(C_SudoMode_OperationScope));
+    public static string C_SudoMode_SettingsScope => Text(nameof(C_SudoMode_SettingsScope));
+    public static string C_SudoMode_CredentialScope => Text(nameof(C_SudoMode_CredentialScope));
     public static string Menu_ExitSudoMode => Text(nameof(Menu_ExitSudoMode));
     public static string M_SudoModeExited => Text(nameof(M_SudoModeExited));
 }

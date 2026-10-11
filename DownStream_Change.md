@@ -678,3 +678,33 @@
 
 ---
 
+## 21. 上游 v3.1.5 同步（合并 `6782f5fa`）与冲突处置
+
+**意图**：把上游 v3.1.5（集控节点、移动端云备份、安全设置移出 `settings.json`、移动端 OAuth、iOS 独立工作流）同步进来，同时**保住本分支的每一条分歧**。这是一次大合并：**35 个冲突 + 354 项非冲突改动**。
+
+| 类别 | 冲突数 | 处置 |
+|------|--------|------|
+| `.resx` | 23 | 取两侧并集，逐文件验证「键集 = 双方并集、无重复键、XML 合法、无标记」 |
+| 测试调用点 | 3 | `SectlAuthService` 构造签名取两侧并集 |
+| `SectlAuthService.cs` | 2 | 构造函数**同时**保留 `configHandler`（我方出境闸门）与 `redirectBrokerFactory`（上游移动端回调）；`SignInAsync` 保留我方闸门，丢弃上游删掉的 `port`/`redirectUri` 两行 |
+| `SecuritySettingsPage.axaml.cs` | 1 | using 取并集 |
+| `THIRD-PARTY-NOTICES.md` | 1 | 上游版详尽许可分析 + 保留我方 `## SecRandom` 上游署名段 |
+| `scripts/gen-release-note.ps1` | 1 | **互补合并**：我方「优先取 `ChangeLog.md`」+ 上游「去掉正文已有下载表」，形成三级回退（我方 ChangeLog → 上游 body → 上游 CHANGELOG → 占位）。不得回退成只读 `CHANGELOG/`——那是上游的树，会把上游发布说明与横幅当作本分支的 |
+| 三份 AGENTS | 6 | 以上游为基础 + 补回我方独有条目。`VeriRandomLauncher` 等**产品身份类标识不得**被上游版本取代（上游那行与之只差一个词，机械合并会静默改回） |
+| `build_publish.yml` | 1 | 上游把 `build_ios` job 整体移入独立的 `build_ios.yml`，故删除我方那个 job；`publish` 头部改为声明本分支禁用 iOS |
+
+**本分支的新决定（属分歧，必须保留）**：**iOS 构建禁用**。`.github/workflows/build_ios.yml` 改名为 **`build_ios.yml.disabled`**（文件改名即失活，保留便于恢复，与仓库既有 `Build.yml.bak` 同一做法）；该文件内的 `maxim-lobanov/setup-xcode` 一并改为 SHA 绑定，使 AGENTS 中「第三方 action 已绑定」的说法为真。上游的 IPA 回填路径（`validate_release` 派发 + `backfill_release`）**有意不接入**；`build_ios` job 删除后，`publish` 的 `needs`/`if` **不得**再引用 `build_ios`。
+
+**必须记住的三个坑（本次合并亲历）**：
+- **上游把 `SecuritySettingsConfig` 移出 `MainConfigModel`**（移入加密的 `data/config/security/settings.json`，经 `SecuritySettingsStore`）。这**不会产生冲突标记**，却会让本分支 §17 的代码编译失败。已改为：`ConfigPolicyDigest.Compute(model, securitySettings, rosterDigest)` 显式接收安全设置；`ConfigPolicySignatureService` 注入 `SecuritySettingsStore`。**每次同步上游都要优先复查这一点**。
+- **取 git 里的文件内容绝不能走 PowerShell 管道**：`& git show ":2:路径"` 会让输出经控制台代码页处理，CJK 被替换成 `?`，写回即污染文件。必须用 `cmd /c 'git show ... > 文件'` 或 .NET 文件 API。失败特征是「纯 ASCII 文件全部通过、CJK 文件成片失败」。
+- **CJK 不得写进 `.ps1` 字面量**（本次在文档合并脚本里又犯了一次）。中文只应作为从文件读出的数据出现。
+
+**已知缺口**：
+1. `build_publish.yml` 的 `validate_release` 仍保留上游的 iOS 派发步骤（`actions: write` 权限 + `Trigger the iOS build` + `gh workflow run build_ios.yml` + 告警兜底）。工作流已改名，因此它**每次发布都会走到那条 `::warning::`**（不会失败），建议连该步骤与那行权限一起删除。
+2. 三份 AGENTS 用机械规则合并（上游为基础 + 补回我方独有条目），有 **13 处**「按同一项处理、取了上游版本」需人工复核是否吞掉了分支特有事实。
+3. OOBE 步骤编号不自洽：`FirstRunOobeViewModel.IsCrossBorderStep` 判 `SelectedStep == 2`，而上游把顺序改为 8 页（`StepCount => 9` 两侧共有因而**没有冲突标记**），需对着 `FirstRunOobeWindow.axaml` 的实际页面顺序核对。
+4. 本次合并（约 390 项）**未经编译**；只有 `gen-release-note.ps1` 过了 PowerShell AST 语法校验。
+
+---
+

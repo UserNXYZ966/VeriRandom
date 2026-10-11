@@ -121,6 +121,23 @@ VeriRandom 以 GNU GPLv3 许可发布；GPLv3 允许您运行、研究、修改�
   <data name="C_PrivacyTitle" xml:space="preserve"><value>隐私</value></data>
     <data name="C_PrivacyDescription" xml:space="preserve"><value>选择应用启动后可发送的诊断和在线状态信息，后续可随时在设置中调整</value></data>
     <data name="C_PrivacyDataDestination" xml:space="preserve"><value>注意：开启后，相关数据将被发送给 SecRandom（上游项目与其所属组织 SECTL）；本分支不接收这些数据</value></data>
+  <data name="C_ControlTitle" xml:space="preserve"><value>集控</value></data>
+  <data name="C_ControlDescription" xml:space="preserve"><value>开启后这台设备会作为集控节点连入集控平台，可被远程查看状态、锁定抽取并下发抽取；开关与身份保存在本机自己的状态文件里，导入设置不会替您打开它</value></data>
+  <data name="C_ControlRemoteEnabled" xml:space="preserve"><value>允许被远程控制</value></data>
+  <data name="C_ControlRemoteEnabledDescription" xml:space="preserve"><value>这是本机自己的开关，关闭后无论集控平台下发什么命令都不会执行</value></data>
+  <data name="C_ControlDisplayName" xml:space="preserve"><value>显示名称</value></data>
+  <data name="C_ControlDisplayNameDescription" xml:space="preserve"><value>集控平台设备列表里显示的名字；留空则上报主机名</value></data>
+  <data name="C_ControlNodeId" xml:space="preserve"><value>节点 ID</value></data>
+  <data name="C_ControlNodeIdDescription" xml:space="preserve"><value>安装时生成并长期保持不变，在集控平台注册这台设备时用它</value></data>
+  <data name="C_ControlGroupId" xml:space="preserve"><value>所属组 ID</value></data>
+  <data name="C_ControlGroupIdDescription" xml:space="preserve"><value>由集控平台建组后提供；节点必须先在该组注册，否则连接会被拒绝</value></data>
+  <data name="C_ControlPlatform" xml:space="preserve"><value>集控平台</value></data>
+  <data name="C_ControlPlatformDescription" xml:space="preserve"><value>在浏览器中打开集控平台网页控制台，管理加入本组的设备</value></data>
+  <data name="C_OpenControlPlane_Official" xml:space="preserve"><value>打开SecRandom集控平台</value></data>
+  <data name="C_OpenControlPlane_ThirdParty" xml:space="preserve"><value>打开第三方托管集控平台</value></data>
+  <data name="M_ControlConnectAfterSetup" xml:space="preserve"><value>这台设备会在完成设置并启动后连接集控平台，届时可在「设置 > 通用 > 集控」查看连接状态</value></data>
+  <data name="M_ControlPlatformOpenFailed" xml:space="preserve"><value>打开集控平台失败，请在设置中重试</value></data>
+    <data name="C_PrivacyEncouragement" xml:space="preserve"><value>求求了嘛~开启会对我们未来的更新会起到更大的帮助</value></data>
   <data name="C_SentryTelemetry" xml:space="preserve"><value>启用 Sentry 遥测</value></data>
     <data name="C_SentryTelemetryDescription" xml:space="preserve"><value>开启后上传崩溃、日志、追踪和性能分析数据；不会控制在线状态统计</value></data>
   <data name="C_OnlineStatus" xml:space="preserve"><value>在线状态</value></data>
@@ -134,6 +151,7 @@ VeriRandom 以 GNU GPLv3 许可发布；GPLv3 允许您运行、研究、修改�
   <data name="C_CompletedClass" xml:space="preserve"><value>点名名单与奖品池可在名单管理中维护</value></data>
   <data name="C_CompletedAppearance" xml:space="preserve"><value>抽奖入口、主题和浮窗外观可在设置中修改</value></data>
   <data name="C_CompletedIntegration" xml:space="preserve"><value>外部链接开关不会关闭应用内部的单实例通信</value></data>
+  <data name="C_CompletedControl" xml:space="preserve"><value>集控开关、显示名称与所属组均可在集控设置中修改</value></data>
   <data name="C_CompletedPrivacy" xml:space="preserve"><value>遥测和在线状态均可在隐私设置中更改</value></data>
   <data name="C_OverwriteTitle" xml:space="preserve"><value>确认覆盖名单</value></data>
   <data name="C_Overwrite" xml:space="preserve"><value>覆盖</value></data>
@@ -143,7 +161,7 @@ VeriRandom 以 GNU GPLv3 许可发布；GPLv3 允许您运行、研究、修改�
   <data name="C_AuthorBilibili" xml:space="preserve"><value>黎泽懿_Aionflux 的哔哩哔哩</value></data>
   <data name="C_Sponsor" xml:space="preserve"><value>爱发电赞助</value></data>
   <data name="C_Community" xml:space="preserve"><value>SECTL 社区群</value></data><data name="C_CommunityQQGroup" xml:space="preserve"><value>QQ 群</value></data><data name="C_CommunityEmail" xml:space="preserve"><value>邮箱</value></data><data name="C_CommunityBilibili" xml:space="preserve"><value>哔哩哔哩</value></data><data name="C_CommunityIssues" xml:space="preserve"><value>问题反馈</value></data><data name="C_CommunityContributing" xml:space="preserve"><value>贡献指南</value></data>
-  <data name="C_CommunityAnswer" xml:space="preserve"><value>QQ群：833875216；进群答案：思拓创联/SECTL</value></data>
+  <data name="C_CommunityAnswer" xml:space="preserve"><value>QQ群：768421833，入群答案：VeriRandom</value></data>
   <data name="C_Previous" xml:space="preserve"><value>上一步</value></data>
   <data name="C_Start" xml:space="preserve"><value>开始</value></data>
   <data name="C_Next" xml:space="preserve"><value>下一步</value></data>

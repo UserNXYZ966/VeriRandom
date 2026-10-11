@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using SecRandom.Core.Models;
+using SecRandom.Core.Models.SubConfigs;
 
 namespace SecRandom.Core.Services.Security;
 
@@ -43,21 +44,27 @@ public static class ConfigPolicyDigest
     /// <summary>
     ///     Computes the digest of the policy this machine is running.
     /// </summary>
+    /// <param name="securitySettings">
+    ///     The security settings, which deliberately do <em>not</em> come from <paramref name="model" />: they
+    ///     live in the encrypted security-settings store (<c>data/config/security/settings.json</c>) rather than
+    ///     in <c>settings.json</c>, so whoever owns both sources passes them in side by side.
+    /// </param>
     /// <param name="rosterDigest">
     ///     Digest of the roster/list files, or null when the operator did not opt into covering them. The
     ///     member's <em>presence</em> is what records that choice: a signature made with rosters covered must
     ///     not verify against a policy that no longer covers them, and turning the option on must invalidate
     ///     the previous signature rather than silently widening the scope.
     /// </param>
-    public static byte[] Compute(MainConfigModel model, string? rosterDigest = null)
+    public static byte[] Compute(MainConfigModel model, SecuritySettingsConfig securitySettings, string? rosterDigest = null)
     {
         ArgumentNullException.ThrowIfNull(model);
+        ArgumentNullException.ThrowIfNull(securitySettings);
 
         var scope = new JsonObject
         {
             ["general"] = new JsonObject
             {
-                ["securitySettings"] = Project(model.SecuritySettings, SelfReferentialFieldNames),
+                ["securitySettings"] = Project(securitySettings, SelfReferentialFieldNames),
                 ["verification"] = Project(model.General.Verification),
                 ["privacySettings"] = Project(model.General.PrivacySettings)
             },

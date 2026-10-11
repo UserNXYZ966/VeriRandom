@@ -48,6 +48,7 @@ public sealed record ConfigPolicyVerification(
 /// </summary>
 public sealed class ConfigPolicySignatureService(
     MainConfigHandler configHandler,
+    SecuritySettingsStore settingsStore,
     ILogger<ConfigPolicySignatureService> logger)
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
@@ -62,7 +63,7 @@ public sealed class ConfigPolicySignatureService(
 
     public ConfigPolicyVerification Verify()
     {
-        if (configHandler.Data.SecuritySettings.ConfigIntegrityMode != ConfigIntegrityMode.SignedPolicy)
+        if (settingsStore.Data.ConfigIntegrityMode != ConfigIntegrityMode.SignedPolicy)
             return new ConfigPolicyVerification(ConfigPolicyVerificationStatus.NotConfigured, null, null, null);
 
         var path = DocumentPath;
@@ -91,7 +92,7 @@ public sealed class ConfigPolicySignatureService(
         }
 
         var fingerprint = ConfigSignature.Fingerprint(document.PublicKey);
-        var digest = ConfigPolicyDigest.Compute(configHandler.Data);
+        var digest = ConfigPolicyDigest.Compute(configHandler.Data, settingsStore.Data);
         if (!ConfigSignature.Verify(digest, document.Signature, document.PublicKey))
         {
             logger.LogWarning(
@@ -123,7 +124,7 @@ public sealed class ConfigPolicySignatureService(
         ArgumentException.ThrowIfNullOrWhiteSpace(privateKeyPkcs8Base64);
 
         var publicKey = ConfigSignature.PublicKeyFromPrivateKey(privateKeyPkcs8Base64);
-        var digest = ConfigPolicyDigest.Compute(configHandler.Data);
+        var digest = ConfigPolicyDigest.Compute(configHandler.Data, settingsStore.Data);
         var document = new ConfigSignatureDocument
         {
             Scope = ConfigPolicyDigest.ScopeId,
