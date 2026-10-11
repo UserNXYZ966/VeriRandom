@@ -84,4 +84,10 @@
   <data name="M_ResultSeparator" xml:space="preserve">
     <value>、</value>
   </data>
+  <data name="C_SignedPolicyBadgeFormat" xml:space="preserve">
+    <value>已锁定 · 指纹 {0}</value>
+  </data>
+  <data name="C_SignedPolicyBadgeTipFormat" xml:space="preserve">
+    <value>本机抽取已由签发的策略锁定；签名者：{0}；签发时间：{1}</value>
+  </data>
 </root>

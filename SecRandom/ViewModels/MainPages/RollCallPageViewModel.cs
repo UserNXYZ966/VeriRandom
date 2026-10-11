@@ -92,6 +92,7 @@ public sealed partial class RollCallPageViewModel : ViewModelBase, IDisposable
         LinkageDrawCoordinator linkageDrawCoordinator,
         VerificationDrawCoordinator verificationDrawCoordinator,
         RollCallDrawService rollCallDrawService,
+        ConfigPolicySignatureService configPolicySignatureService,
         IVoiceAnnouncementService? voiceAnnouncementService = null,
         DrawAudioService? drawAudioService = null,
         NotificationService? notificationService = null)
@@ -126,9 +127,51 @@ public sealed partial class RollCallPageViewModel : ViewModelBase, IDisposable
         Config.MoreSettings.PropertyChanged += SettingsOnPropertyChanged;
         Config.Appearance.PropertyChanged += SettingsOnPropertyChanged;
 
+        // 分离签名既不写 settings.json 也不写本页的任何配置子树，所以上面那几条配置订阅收不到
+        // 「启用/签发」的通知；没有这一条，操作员在设置页启用签名后回到抽签界面会一直看到旧状态。
+        // 事件在 UI 线程外也可能到达（设置存储会被后台路径保存），所以统一回到 UI 线程再改属性。
+        configPolicySignatureService.PolicyChanged += (_, _) =>
+            Dispatcher.UIThread.Post(() => RefreshSignedPolicyBadge(configPolicySignatureService));
+
         RefreshLists();
         RefreshFilterOptions();
         RefreshCounts();
+        RefreshSignedPolicyBadge(configPolicySignatureService);
+    }
+
+    /// <summary>
+    ///     分离签名生效时，抽签界面必须能看见「本机策略由谁签发」。指纹是逐字核对签名者身份的唯一
+    ///     手段，只在设置页里显示等于日常抽签的人看不到它。这里只区分两种状态：没启用（不显示）与
+    ///     已验证（显示指纹并给出签名者与签发时间）——验签失败的策略在启动闸门就被拦下了，到不了
+    ///     抽签界面。
+    /// </summary>
+    public bool HasSignedPolicyBadge => !string.IsNullOrEmpty(SignedPolicyBadgeText);
+
+    public string SignedPolicyBadgeText { get; private set; } = string.Empty;
+
+    public string SignedPolicyTooltip { get; private set; } = string.Empty;
+
+    private void RefreshSignedPolicyBadge(ConfigPolicySignatureService service)
+    {
+        var verification = service.Verify();
+        var fingerprint = verification.PublicKeyFingerprint;
+        if (!verification.IsVerified || string.IsNullOrWhiteSpace(fingerprint))
+        {
+            SignedPolicyBadgeText = string.Empty;
+            SignedPolicyTooltip = string.Empty;
+        }
+        else
+        {
+            SignedPolicyBadgeText = string.Format(SR.C_SignedPolicyBadgeFormat, fingerprint);
+            SignedPolicyTooltip = string.Format(
+                SR.C_SignedPolicyBadgeTipFormat,
+                string.IsNullOrWhiteSpace(verification.SignerLabel) ? "-" : verification.SignerLabel,
+                verification.SignedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "-");
+        }
+
+        OnPropertyChanged(nameof(SignedPolicyBadgeText));
+        OnPropertyChanged(nameof(SignedPolicyTooltip));
+        OnPropertyChanged(nameof(HasSignedPolicyBadge));
     }
 
     public ObservableCollection<string> StudentListNames { get; } = [];

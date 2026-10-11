@@ -93,4 +93,10 @@
   <data name="C_Start" xml:space="preserve">
      <value>Start</value>
   </data>
+  <data name="C_SignedPolicyBadgeFormat" xml:space="preserve">
+    <value>Locked · Fingerprint {0}</value>
+  </data>
+  <data name="C_SignedPolicyBadgeTipFormat" xml:space="preserve">
+    <value>Draws on this machine are locked by a signed policy; signer: {0}; signed: {1}</value>
+  </data>
 </root>

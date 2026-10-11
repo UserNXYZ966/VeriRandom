@@ -61,5 +61,7 @@ namespace SecRandom.Langs.MainPages.RollCall {
         public static string M_AutoResetDone => ResourceManager.GetString("M_AutoResetDone", resourceCulture);
         public static string O_AllGenders => ResourceManager.GetString("O_AllGenders", resourceCulture);
         public static string O_AllGroups => ResourceManager.GetString("O_AllGroups", resourceCulture);
+        public static string C_SignedPolicyBadgeFormat => ResourceManager.GetString("C_SignedPolicyBadgeFormat", resourceCulture);
+        public static string C_SignedPolicyBadgeTipFormat => ResourceManager.GetString("C_SignedPolicyBadgeTipFormat", resourceCulture);
     }
 }

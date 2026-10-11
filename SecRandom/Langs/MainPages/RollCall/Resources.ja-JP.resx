@@ -27,4 +27,10 @@
   <data name="M_InvalidWeight" xml:space="preserve"><value>重みの設定が無効です</value></data>
   <data name="M_DrawFailed" xml:space="preserve"><value>抽選に失敗しました</value></data>
   <data name="M_ResultSeparator" xml:space="preserve"><value>、</value></data>
+  <data name="C_SignedPolicyBadgeFormat" xml:space="preserve">
+    <value>ロック済み · 指紋 {0}</value>
+  </data>
+  <data name="C_SignedPolicyBadgeTipFormat" xml:space="preserve">
+    <value>この端末の抽選は署名済みポリシーでロックされています；署名者：{0}；署名日時：{1}</value>
+  </data>
 </root>

@@ -710,3 +710,19 @@
 
 ---
 
+## 22. 分离签名的指纹徽标（§17 的可见性补充）
+
+**变更**：分离签名生效时，除安全设置页之外，**抽签主界面（`main.rollCall`）也显示签名公钥指纹**。
+
+**为什么**：指纹是逐字核对签名者身份的唯一手段，只在设置页显示意味着日常抽签的人看不到「本机抽取到底由谁签发」。徽标内容是 `已锁定 · 指纹 <32 位大写十六进制>`，悬停显示签名者与签发时间。
+
+**实现要点（都要保留）**：
+- 只区分「未启用（不显示）」与「已验证（显示指纹）」两态：验签失败的策略在启动闸门（`App.OnFrameworkInitializationCompleted`）就被拦下，到不了抽签界面。
+- 徽标放在 `RollCallPage.axaml` 根 `Grid` 第 1 列左上角，**不放进** `RollCallControlPanelTemplate`：那个面板会随 `MoreSettings.RollCallControlPanelPosition` 左右换边，里面每个控件还有各自的显隐开关，放进去的徽标会跟着跳边。
+- `ConfigPolicySignatureService` 新增 `PolicyChanged` 事件：安全设置保存时（完整性模式住在那里）或签发文档时触发。抽签页 ViewModel 比「操作员去签发」早得多就建好了，只靠构造时取一次或只在导航时刷新，都会让操作员在设置页启用签名后回到抽签界面看到旧状态。事件的 `add`/`remove` accessor 只在第一个订阅者到来时挂上存储的 `Saved`，最后一个订阅者离开时摘掉。
+- 事件可能来自非 UI 线程（设置存储也会被后台路径保存），所以 ViewModel 用 `Dispatcher.UIThread.Post` 回到 UI 线程再改属性。
+- 文案键 `C_SignedPolicyBadgeFormat` / `C_SignedPolicyBadgeTipFormat` 放在 `Langs/MainPages/RollCall/`（中英日三语齐备），经该页 `Resources.Designer.cs` 的手写属性暴露。该 designer 是签入的自动生成文件，IDE 重新生成时会从 resx 恢复这两个属性，所以手写是自愈的。
+- 目前只挂在点名页；`LotteryPage` 结构相同，需要时把同一块 `StackPanel` 加进它的根 `Grid` 并在 `LotteryPageViewModel` 加同一组属性即可（文案键可直接复用 `Langs/MainPages/RollCall` 的）。
+
+---
+

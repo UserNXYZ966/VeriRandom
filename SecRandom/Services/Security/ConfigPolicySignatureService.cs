@@ -51,6 +51,31 @@ internal sealed class ConfigPolicySignatureService(
     SecuritySettingsStore settingsStore,
     ILogger<ConfigPolicySignatureService> logger)
 {
+    private EventHandler? _policyChanged;
+
+    /// <summary>
+    ///     已部署的策略可能变了：安全设置的保存（完整性模式就住在那里）或一份新的签名文档落盘。
+    ///     抽签界面比"操作员去签发"早得多就建好了，所以它订这个事件而不是轮询策略文件。
+    ///     存储的事件只在第一个订阅者到来时挂上，最后一个订阅者走掉后摘掉。
+    /// </summary>
+    public event EventHandler? PolicyChanged
+    {
+        add
+        {
+            if (_policyChanged is null)
+                settingsStore.Saved += OnSecuritySettingsSaved;
+            _policyChanged += value;
+        }
+        remove
+        {
+            _policyChanged -= value;
+            if (_policyChanged is null)
+                settingsStore.Saved -= OnSecuritySettingsSaved;
+        }
+    }
+
+    private void OnSecuritySettingsSaved(object? sender, EventArgs e) => _policyChanged?.Invoke(this, EventArgs.Empty);
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true,
@@ -144,6 +169,9 @@ internal sealed class ConfigPolicySignatureService(
         logger.LogInformation(
             "已签发配置策略。签名者={Signer}，指纹={Fingerprint}，范围={Scope}",
             document.SignerLabel, ConfigSignature.Fingerprint(publicKey), document.Scope);
+        // 签发会改变指纹、签名者和签发时间，所以与设置保存走同一条通知。
+        _policyChanged?.Invoke(this, EventArgs.Empty);
+
         return path;
     }
 
