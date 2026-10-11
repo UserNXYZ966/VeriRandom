@@ -685,7 +685,7 @@
 | 类别 | 冲突数 | 处置 |
 |------|--------|------|
 | `.resx` | 23 | 取两侧并集，逐文件验证「键集 = 双方并集、无重复键、XML 合法、无标记」 |
-| 测试调用点 | 3 | `SectlAuthService` 构造签名取两侧并集 |
+| 测试调用点 | 3 | `SectlAuthService` 构造签名取两侧并集。**实际有 9 处调用，其中 6 处在上游新增的测试文件里仍是 5 参调用——没有冲突标记，桌面发布任务又不编译测试工程，所以首轮 CI 也看不到**（见下） |
 | `SectlAuthService.cs` | 2 | 构造函数**同时**保留 `configHandler`（我方出境闸门）与 `redirectBrokerFactory`（上游移动端回调）；`SignInAsync` 保留我方闸门，丢弃上游删掉的 `port`/`redirectUri` 两行 |
 | `SecuritySettingsPage.axaml.cs` | 1 | using 取并集 |
 | `THIRD-PARTY-NOTICES.md` | 1 | 上游版详尽许可分析 + 保留我方 `## SecRandom` 上游署名段 |
@@ -697,6 +697,8 @@
 
 **必须记住的三个坑（本次合并亲历）**：
 - **上游把 `SecuritySettingsConfig` 移出 `MainConfigModel`**（移入加密的 `data/config/security/settings.json`，经 `SecuritySettingsStore`）。这**不会产生冲突标记**，却会让本分支 §17 的代码编译失败。已改为：`ConfigPolicyDigest.Compute(model, securitySettings, rosterDigest)` 显式接收安全设置；`ConfigPolicySignatureService` 注入 `SecuritySettingsStore`。**每次同步上游都要优先复查这一点**。
+- **给某个类型的构造函数加参数时，上游新增的测试文件会静默编译失败**。本分支把 `MainConfigHandler configHandler` 插进 `SectlAuthService` 的主构造函数（第 5 位、`IAuthRedirectBrokerFactory` 之前），而上游 v3.1.5 新增的 `ControlNodeEnrollmentChannelTests`、`NodeEnrollmentTests`、`MobileRemoteDrawTests` 仍按 5 参调用——**没有冲突标记**，且桌面发布任务不编译测试工程，连首轮 CI 也照不出来。**结论：改完任何构造签名后，必须全仓检索该类型的全部构造点逐个核对参数个数，不能只信冲突列表。**
+- 同一处还触发了 **CS0051**：`ConfigPolicySignatureService`（我方 §17 的 `public` 服务）持有上游的 `internal` 类型 `SecuritySettingsStore`，`public` 类的构造函数不能暴露更不可见的参数类型。已把它改为 `internal sealed class`，与其三个同类（`SecurityService`、`SettingsIntegrityService`、`SettingsIntegrityRecoveryService`）保持一致——它只在应用程序集内被 `IAppHost` 解析，改 internal 不涉及任何上游分歧。
 - **取 git 里的文件内容绝不能走 PowerShell 管道**：`& git show ":2:路径"` 会让输出经控制台代码页处理，CJK 被替换成 `?`，写回即污染文件。必须用 `cmd /c 'git show ... > 文件'` 或 .NET 文件 API。失败特征是「纯 ASCII 文件全部通过、CJK 文件成片失败」。
 - **CJK 不得写进 `.ps1` 字面量**（本次在文档合并脚本里又犯了一次）。中文只应作为从文件读出的数据出现。
 

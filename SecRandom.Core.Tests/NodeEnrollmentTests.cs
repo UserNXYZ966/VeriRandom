@@ -408,6 +408,7 @@ public sealed class NodeEnrollmentTests : IDisposable
             new FakeHttpClientFactory(new RecordingHandler(_ => Json(HttpStatusCode.OK, "{}"))),
             new DeviceUuidStore(configHandler, NullLogger<DeviceUuidStore>.Instance),
             NullLogger<SectlAuthService>.Instance,
+            configHandler,
             new LoopbackAuthRedirectBrokerFactory());
     }
 

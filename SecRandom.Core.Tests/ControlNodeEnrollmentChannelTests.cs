@@ -487,6 +487,7 @@ public sealed class ControlNodeEnrollmentChannelTests(ITestOutputHelper output)
             new StubHttpClientFactory(new HttpClient()),
             new DeviceUuidStore(configHandler, NullLogger<DeviceUuidStore>.Instance),
             NullLogger<SectlAuthService>.Instance,
+            configHandler,
             new LoopbackAuthRedirectBrokerFactory());
     }
 

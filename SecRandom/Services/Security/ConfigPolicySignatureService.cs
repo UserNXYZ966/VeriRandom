@@ -46,7 +46,7 @@ public sealed record ConfigPolicyVerification(
 ///     never reaches this class — signing takes it as a parameter, which is what lets the draw machine
 ///     verify a policy it could not have authored.
 /// </summary>
-public sealed class ConfigPolicySignatureService(
+internal sealed class ConfigPolicySignatureService(
     MainConfigHandler configHandler,
     SecuritySettingsStore settingsStore,
     ILogger<ConfigPolicySignatureService> logger)

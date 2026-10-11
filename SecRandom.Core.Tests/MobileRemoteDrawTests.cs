@@ -938,6 +938,7 @@ public sealed class MobileRemoteDrawTests : IDisposable
             new StubHttpClientFactory(new HttpClient()),
             new DeviceUuidStore(configHandler, NullLogger<DeviceUuidStore>.Instance),
             NullLogger<SectlAuthService>.Instance,
+            configHandler,
             new LoopbackAuthRedirectBrokerFactory());
         await auth.InitializeAsync();
 
@@ -966,6 +967,7 @@ public sealed class MobileRemoteDrawTests : IDisposable
             new StubHttpClientFactory(new HttpClient()),
             new DeviceUuidStore(configHandler, NullLogger<DeviceUuidStore>.Instance),
             NullLogger<SectlAuthService>.Instance,
+            configHandler,
             new LoopbackAuthRedirectBrokerFactory());
 
         var store = new FakeEnrollmentStore();
@@ -1019,6 +1021,7 @@ public sealed class MobileRemoteDrawTests : IDisposable
             new StubHttpClientFactory(new HttpClient()),
             new DeviceUuidStore(configHandler, NullLogger<DeviceUuidStore>.Instance),
             NullLogger<SectlAuthService>.Instance,
+            configHandler,
             new LoopbackAuthRedirectBrokerFactory());
 
         var endpoint = new FakeEndpointStore("https://control.example", customEndpoint);
@@ -1455,6 +1458,7 @@ public sealed class MobileRemoteDrawTests : IDisposable
             new StubHttpClientFactory(new HttpClient()),
             deviceUuidStore,
             NullLogger<SectlAuthService>.Instance,
+            configHandler,
             new LoopbackAuthRedirectBrokerFactory());
 
         var client = new RecordingControlPlaneClient();
