@@ -31,6 +31,8 @@ public sealed class WindowsPlatformServiceRoot : IPlatformServiceRoot
 
     public IRemovableStorageCatalog RemovableStorage { get; } = new WindowsRemovableStorageCatalog();
 
+    public IForegroundWindowService ForegroundWindow { get; } = new WindowsForegroundWindowService();
+
     public IRemovableStorageBindingMarker RemovableStorageBindingMarker { get; } =
         new WindowsRemovableStorageBindingMarker();
 

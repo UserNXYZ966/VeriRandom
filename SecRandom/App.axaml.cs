@@ -2643,6 +2643,38 @@ public partial class App : Application
             DispatcherPriority.Render);
     }
 
+    /// <summary>
+    ///     Foreground window of whoever invoked this quick draw, so it can be handed back when the draw window
+    ///     closes. Static because the invocation and the window's close handler are both static; it is cleared
+    ///     on every path that does not end with a window being closed.
+    /// </summary>
+    private static PlatformWindowHandle? _quickDrawForegroundTarget;
+
+    /// <summary>
+    ///     Starts the beacon fetch before anything else can delay the draw, so the HTTP round trip runs behind
+    ///     the rolling animation instead of in front of it. Only the pulse is fetched — the per-pulse sequence
+    ///     is still reserved at draw time, so an unused prefetch costs nothing.
+    /// </summary>
+    private static void QuickDrawBeaconPrefetch()
+    {
+        if (!IAppHost.GetService<MainConfigHandler>().Data.General.Verification.BeaconPrefetchEnabled)
+            return;
+
+        IAppHost.TryGetService<BeaconEntropyProvider>()?.Prefetch();
+    }
+
+    /// <summary>
+    ///     Records the window that owns the foreground, unless the option is off or the platform has no
+    ///     implementation — in which case there is deliberately nothing to hand back.
+    /// </summary>
+    private static PlatformWindowHandle? CaptureQuickDrawForegroundTarget()
+    {
+        if (!IAppHost.GetService<MainConfigHandler>().Data.FloatingWindowSettings.RestoreFocusAfterQuickDraw)
+            return null;
+
+        return IAppHost.TryGetService<IForegroundWindowService>()?.Capture();
+    }
+
     private static async Task ShowQuickDrawWindowAsync()
     {
         TelemetryRuntimeService? telemetry = IAppHost.TryGetService<TelemetryRuntimeService>();
@@ -2653,8 +2685,16 @@ public partial class App : Application
             _quickDrawNotificationSettings = null;
             var quickDraw = IAppHost.GetService<QuickDrawPageViewModel>();
             quickDraw.ClearNotificationPresentation();
+
+            // Both of these must run before anything of ours can take the foreground: the authorization prompt
+            // below may activate our floating window (App.GetRootWindow falls back to it), so a capture taken
+            // after it would record our own window instead of the classroom's.
+            QuickDrawBeaconPrefetch();
+            _quickDrawForegroundTarget = CaptureQuickDrawForegroundTarget();
+
             if (!quickDraw.IsDrawing && !await quickDraw.AuthorizeTriggeredDrawAsync())
             {
+                _quickDrawForegroundTarget = null;
                 transaction?.Finish(SpanStatus.PermissionDenied);
                 return;
             }
@@ -2663,6 +2703,9 @@ public partial class App : Application
                 .UsesBuiltInNotificationService(NotificationSettingsType.QuickDraw);
             if (!showBuiltInNotificationAnimation)
             {
+                // External-only delivery draws with no window of ours, so there is no window to hand the
+                // foreground back from.
+                _quickDrawForegroundTarget = null;
                 HideQuickDrawNotificationWindow();
                 if (!quickDraw.IsDrawing)
                     await quickDraw.StartAuthorizedTriggeredDrawAsync();
@@ -2726,6 +2769,16 @@ public partial class App : Application
         {
             _quickDrawWindow = null;
             _quickDrawNotificationSettings = null;
+
+            // Handed back here, while this window still owns the foreground: SetForegroundWindow is refused
+            // once the caller no longer owns it, and a shutting-down app must not touch another
+            // application's windows.
+            if (_quickDrawForegroundTarget is { } target)
+            {
+                _quickDrawForegroundTarget = null;
+                if (!IsStopping)
+                    IAppHost.TryGetService<IForegroundWindowService>()?.TryRestore(target);
+            }
         };
         return _quickDrawWindow;
     }

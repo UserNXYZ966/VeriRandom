@@ -92,7 +92,6 @@ public sealed partial class RollCallPageViewModel : ViewModelBase, IDisposable
         LinkageDrawCoordinator linkageDrawCoordinator,
         VerificationDrawCoordinator verificationDrawCoordinator,
         RollCallDrawService rollCallDrawService,
-        ConfigPolicySignatureService configPolicySignatureService,
         IVoiceAnnouncementService? voiceAnnouncementService = null,
         DrawAudioService? drawAudioService = null,
         NotificationService? notificationService = null)
@@ -130,13 +129,21 @@ public sealed partial class RollCallPageViewModel : ViewModelBase, IDisposable
         // 分离签名既不写 settings.json 也不写本页的任何配置子树，所以上面那几条配置订阅收不到
         // 「启用/签发」的通知；没有这一条，操作员在设置页启用签名后回到抽签界面会一直看到旧状态。
         // 事件在 UI 线程外也可能到达（设置存储会被后台路径保存），所以统一回到 UI 线程再改属性。
-        configPolicySignatureService.PolicyChanged += (_, _) =>
-            Dispatcher.UIThread.Post(() => RefreshSignedPolicyBadge(configPolicySignatureService));
+        //
+        // 这里刻意用静态解析而不是构造注入：ConfigPolicySignatureService 是 internal，而本 ViewModel 是
+        // public（手机壳与 XAML 都用它），把 internal 类型放进 public 构造函数就是 CS0051——能收窄的只有
+        // 我方这一侧，而上游的 VM 不能收窄，所以只能不把它当参数。它同时是可选的：取不到就只是不显示
+        // 徽标，与 ConfigPolicyLock 的「取不到即视为没有分离签名」保持一致。
+        if (SecRandom.Core.Abstraction.IAppHost.TryGetService<ConfigPolicySignatureService>() is { } signedPolicy)
+        {
+            signedPolicy.PolicyChanged += (_, _) =>
+                Dispatcher.UIThread.Post(() => RefreshSignedPolicyBadge(signedPolicy));
+            RefreshSignedPolicyBadge(signedPolicy);
+        }
 
         RefreshLists();
         RefreshFilterOptions();
         RefreshCounts();
-        RefreshSignedPolicyBadge(configPolicySignatureService);
     }
 
     /// <summary>

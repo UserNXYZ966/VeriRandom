@@ -744,3 +744,55 @@
 
 ---
 
+## 24. 闪抽：焦点回落选项 + 信标预取（已侦察，待实现）
+
+**需求（用户指定）**：（1）为闪抽及其快捷键调用途径增加选项——在调用前记录当时的前台/活动窗口，闪抽窗口关闭后把焦点还回去；（2）在闪抽动画切换时提前 0.5~1 秒异步拉取信标，以减少网络表观延迟。
+
+**侦察结论：两处与直觉不同，动手前必须先看**
+
+- **「丢弃式」预取是有害的**。`BeaconEntropyProvider.ReserveAsync`（`SecRandom/Services/Verification/BeaconEntropyProvider.cs:44-85`）在**返回种子之前就把 `data/proofs/beacon-state.json` 落盘**，因此一次没被用掉的预取会**消耗一个脉冲序号并留下一个可见的证明缺口**（该行为被 `SecRandom.Core.Tests/BeaconEntropyTests.cs:120-132` 钉住）。所以预取必须把 `BeaconSeedReservation` **交给抽取复用**，绝不能在抽时再调一次。`_gate` 是 `SemaphoreSlim(1,1)`：串行但**不合并**，第二次调用会等完再占一个新序号。
+- **它今天已经基本被动画盖住了**。信标在 `VerificationDrawCoordinator.cs:180` 被 await，而承载它的 `verificationDrawTask` 是在 `QuickDrawPageViewModel.cs:246` 创建的——滚动动画在 `:233` 就已发起、`:253` 开始预览，同一轮 UI 内并发。也就是说**内置通知动画开着时，网络延迟已经被动画掩盖**。真正还能抢回来的只有两段空档：`await BeginClassIslandAnimationAsync`（`:238`，ClassIsland IPC，可能很慢）之前，以及 `showBuiltInNotificationAnimation == false`（`:231/:244`，`skipPreview: true`，**根本没有动画**）这条路径——后者收益最大。
+- **焦点回落没有单一入口**：开窗入口是 `App.ShowQuickDrawWindowAsync()`（`SecRandom/App.axaml.cs:2646`），但 **IPC 路径绕开了它**（`Services/Ipc/ProtocolCommandRouter.cs:436`）；而六条路径最终都汇到 `QuickDrawPageViewModel.StartAuthorizedTriggeredDrawAsync()`（`ViewModels/MainPages/QuickDrawPageViewModel.cs:191`）。
+- **抓焦点必须早于密码弹窗**：`App.axaml.cs:2646` 里的 `AuthorizeTriggeredDrawAsync()` 在 `:2656`；`ProtectQuickDrawStart` 开着时会弹 `SecurityVerificationWindow`，而 `App.GetRootWindow()`（`:167-186`）自身会 `floatingRoot.Activate()` ⇒ 弹窗之后再抓，抓到的是**我们自己的窗口**。
+
+**实现要点（按此写，别改顺序）**
+
+1. 平台能力必须**有状态**，不能塞进 `IWindowFeatureService`（那是无状态开关契约，只有"目标句柄 + 布尔"两个输入，表达不了"记住另一个窗口、稍后把它提到前台"）。照 `IRemovableStorageCatalog` 的形状做：`SecRandom.Platforms.Abstractions/` 新增接口（如 `PlatformWindowHandle? Capture()` / `bool TryRestore(PlatformWindowHandle)`）+ `IPlatformServiceRoot` 上加一个属性 + `SecRandom.Platforms/PlatformServiceCollectionExtensions.cs:15-21` 一行注册 + `SecRandom.Platforms` 里的 Unsupported 桩 + Windows/Linux/macOS 各一实现 + `SecRandom/Mobile/MobilePlatformServiceRoot.cs` 空实现。
+   **必须一次全做完**：只加接口或只加 root 属性会让 5 个 root 全部编译不过，不存在"安全的中间态"。
+2. Windows 实现用 `GetForegroundWindow` + `SetForegroundWindow`——全仓目前**零命中**，是全新原生代码（`SecRandom.Desktop/UiAccessStartup.cs` 不做前台窗口操作，它只复制提升后的令牌并设 `TokenUIAccess`）。`SetForegroundWindow` 受 Windows 前台锁限制，要在**我们还持有前台时**调用（`Closed` 处理器内、窗口真正销毁前），并跳过 `App.IsStopping`；外部通知路径（`App.axaml.cs:2664-2671`）**根本没有窗口**，不能回落。
+3. 落点：捕获 → `ShowQuickDrawWindowAsync` 顶部（`App.axaml.cs:2646`，**必须早于 `:2656`**）+ `ProtocolCommandRouter.HandleQuickDrawAsync`（`:436`）；回落 → 扩展现有唯一的 `Closed` 处理器（`App.axaml.cs:2725-2729`，那里已经清空 `_quickDrawWindow`/`_quickDrawNotificationSettings`）。
+4. 选项放**浮动窗口设置页**（`settings.personalized.floatingWindow` / `FloatingWindowSettingsConfig`），照 `S_Interaction_Draggable` 行写（XAML `Views/SettingsPages/Personalized/FloatingWindowSettingsPage.axaml:117-124`；代码后置**没有逐字段接线**，靠 `Settings.PropertyChanged → ConfigHandler.Save()`，`OnLoaded`/`OnUnloaded` 订阅）。该页 i18n 目录是 `SecRandom/Langs/SettingsPages/FloatingWindow/`（三语齐备）。
+   ⚠️ 新增的公开属性会**同时被集控读写**（`ControlSettingsCatalog.cs:74` 的反射映射）：若不允许远程改，必须加进 `ControlSettingsCatalog.cs:143` 的 `ReadOnlyPaths`，并在 `ControlSettingsLabels` 的 `floating_window` 映射里补文案。
+5. 信标预取：把 `ReserveAsync` 提到 `await BeginClassIslandAnimationAsync` 之前并发等待，把得到的 `BeaconSeedReservation` 传进抽取路径**复用**；不要新增第二次 `ReserveAsync`（见上）。无动画路径（`skipPreview`）优先。
+
+**可选更省方案（未采纳，待用户拍板）**：`WindowFeatures.NoActivate` 已声明且 Windows 已实现（`Platforms.Windows/WindowsWindowFeatureService.cs`），但**全仓无人请求**；闪抽窗口也没设 `ShowActivated`（`App.axaml.cs:2692`，只有浮动窗设了 `ShowActivated="False"`）。若改成"永不抢焦点"，就完全不需要原生焦点代码——代价是闪抽窗口不再接收键盘输入，且要在 `:2602/:2633/:2676` 去掉 `Activate()`。
+
+---
+
+## 25. 闪抽焦点回落 + 信标预取（已实现，落地 §24 的两个需求）
+
+**两个开关都默认关闭、都做进了 UI**：
+
+| 开关 | 位置 | 配置字段 |
+|------|------|----------|
+| 闪抽结束后归还焦点 | 浮动窗口设置页 · 交互组（`S_Interaction_RestoreFocusAfterQuickDraw`） | `FloatingWindowSettingsConfig.RestoreFocusAfterQuickDraw` |
+| 抽签前预取信标脉冲 | 抽取验证页 · 信标组（`S_BeaconPrefetch`） | `VerificationSettingsConfig.BeaconPrefetchEnabled` |
+
+**焦点回落**：新增平台能力 `IForegroundWindowService`（`Platforms.Abstractions`：`IsSupported` / `Capture()` / `TryRestore()`）。它**必须**是有状态契约，不能塞进 `IWindowFeatureService`——后者是"给一个句柄套一个布尔属性"的无状态开关，表达不了"记住另一个窗口、稍后再送给它"。Windows 实现是 `Platforms.Windows/WindowsForegroundWindowService.cs`（`GetForegroundWindow`/`SetForegroundWindow`，**本分支首次出现的原生前台窗口代码**）；Linux/macOS/桩/移动端一律返回 `SecRandom.Platforms.UnsupportedForegroundWindowService.Instance` 并因此报告 `IsSupported=false`（按 `Platforms.Abstractions/AGENTS.md`"不实现就不许声称支持"），这些平台上开关**不生效**，页面描述已写明"目前仅 Windows 支持"。
+
+接线落在 `App.ShowQuickDrawWindowAsync` 顶部与 `GetOrCreateQuickDrawWindow` 里唯一的 `Closed` 处理器：
+- 捕获**必须早于** `AuthorizeTriggeredDrawAsync`——`ProtectQuickDrawStart` 会弹验证窗，而 `App.GetRootWindow` 自身会 `Activate()` 浮动窗，晚于此处的捕获会记到我们自己的窗口
+- 回落放在 `Closed` 里，因为 `SetForegroundWindow` 一旦失去前台就会被拒；`IsStopping` 时不碰别人的窗口
+- 拒绝授权与"外部通知"两条路径会清空捕获（后者根本没有窗口可回落）
+- **IPC/集控路径不走 `ShowQuickDrawWindowAsync`，因此不参与这个开关**
+
+**信标预取**：`BeaconEntropyProvider` 新增 `Prefetch()`，**只取脉冲、不占序号**，并把结果连同**当时的端点**一起缓存；`ReserveAsync` 改走 `TakePrefetchedPulseAsync`：端点没变就用缓存（取缓存失败则安静地重新获取），端点变了就丢弃——否则换过端点后会把旧端点的脉冲当作新端点的记录进证明。本次实现**修正了 §24 的原始设想**：那里担心"预取会消耗序号并留下证明缺口"，实际上序号只在 `ReserveAsync` 内落盘，所以只预取脉冲完全无副作用；剩下的代价只有"脉冲跨周期后评分减半"，可以接受。调用点同样在 `ShowQuickDrawWindowAsync` 顶部（比绘制任务早，把 ClassIsland IPC 与开窗耗时也一起盖住）。
+
+⚠️ **`ConfigPolicyDigest.ScopeId` 已从 `verirandom-config-policy/v2` 升到 `v3`**：`BeaconPrefetchEnabled` 落在被策略整棵投影的 `General.Verification` 子树里，覆盖字段集变了就必须换 id（该文件的显式要求）。后果是**任何已签发的旧策略文档都会变成 `DocumentMalformed`**，进而触发启动完整性闸门——本次尚未发布，重新签发即可；将来再有"往被覆盖子树里加字段"的改动，务必一起升 id 并提前告知使用方。
+
+**未做**：§24 末尾的"永不抢焦点"替代方案仍未采纳。另外顺带查清——`FloatingWindowSettingsConfig.DoNotStealFocus` 是**死设置**：只有 `ControlSettingsLabels` 的标签映射、`SettingsSearchService` 的搜索 id 与 designer 引用它，**没有任何页面绑定、也没有任何运行时代码读它**。本次没有动它。
+
+**⚠️ 一个必须记住的编译边界（本轮第一次 CI 就栽在这里）**：让抽签页显示指纹时，最初把 `ConfigPolicySignatureService` 当作 `RollCallPageViewModel` 的**构造参数**——它是 `internal`，而那个 ViewModel 是 `public`（手机壳与 XAML 都用它），于是 `CS0051`。这与 §21 里那条正好相反：那次能收窄的是**我方**类型，这次消费者是**上游的 public VM，收窄不了**，所以正确做法是**不把它当参数**，改在构造时用 `IAppHost.TryGetService<ConfigPolicySignatureService>()` 静态解析（`ConfigPolicyLock` 早就这么做）。附带好处是保持了"取不到就不显示徽标"的可选语义。**不要把它改回构造注入**——那会重新引入 CS0051，而且编译器只在拥有该 public 成员的程序集里报出来。
+
+---
+

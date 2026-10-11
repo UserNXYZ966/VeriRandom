@@ -20,8 +20,11 @@ namespace SecRandom.Core.Services.Security;
 /// </summary>
 public static class ConfigPolicyDigest
 {
-    /// <summary>Identifies the covered field set. Adding or removing a covered setting must change this id.</summary>
-    public const string ScopeId = "verirandom-config-policy/v2";
+    /// <summary>
+    ///     Identifies the covered field set. Adding or removing a covered setting must change this id.
+    ///     v3 added the beacon-prefetch switch to the verification subtree, which the policy projects wholesale.
+    /// </summary>
+    public const string ScopeId = "verirandom-config-policy/v3";
 
     /// <summary>
     ///     Security fields that describe the integrity check itself. Covering them would make switching the

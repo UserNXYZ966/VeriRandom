@@ -39,6 +39,60 @@ public sealed class BeaconEntropyProvider(
     private bool _stateLoaded;
     private BeaconSequenceState? _state;
 
+    private readonly object _prefetchGate = new();
+    private (Uri Endpoint, Task<BeaconPulse> Pulse)? _prefetched;
+
+    /// <summary>
+    ///     Starts fetching the latest pulse without reserving anything, so a caller that knows a draw is about
+    ///     to happen (the quick-draw rolling animation is the intended window) can hide the HTTP round trip
+    ///     behind it. Deliberately does <em>not</em> touch the per-pulse sequence — only
+    ///     <see cref="ReserveAsync" /> does — so a prefetch whose draw never happens consumes no sequence and
+    ///     leaves no gap in the proof chain. A failed prefetch is dropped quietly: the draw fetches again and
+    ///     fails loudly if the beacon is genuinely unreachable, because a draw must never fall back to a
+    ///     local seed.
+    /// </summary>
+    public void Prefetch()
+    {
+        if (!IsEnabled)
+            return;
+
+        lock (_prefetchGate)
+        {
+            if (_prefetched is { Pulse.IsCompleted: false })
+                return;
+
+            // The endpoint is remembered with the task: an operator may switch endpoints between the
+            // prefetch and the draw, and a pulse from the old endpoint must never be recorded as if it came
+            // from the new one.
+            var endpoint = BeaconEndpointPolicy.Normalize(configHandler.Data.General.Verification.BeaconEndpoint);
+            _prefetched = (endpoint, beaconClient.GetLatestPulseAsync(endpoint, CancellationToken.None));
+        }
+    }
+
+    private async Task<BeaconPulse> TakePrefetchedPulseAsync(Uri endpoint, CancellationToken cancellationToken)
+    {
+        (Uri Endpoint, Task<BeaconPulse> Pulse)? pending;
+        lock (_prefetchGate)
+        {
+            pending = _prefetched;
+            _prefetched = null;
+        }
+
+        if (pending is { } candidate && candidate.Endpoint == endpoint)
+        {
+            try
+            {
+                return await candidate.Pulse.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                logger.LogDebug(exception, "信标脉冲预取结果不可用，抽取前重新获取。");
+            }
+        }
+
+        return await beaconClient.GetLatestPulseAsync(endpoint, cancellationToken).ConfigureAwait(false);
+    }
+
     public bool IsEnabled => configHandler.Data.General.Verification.BeaconEntropyEnabled;
 
     public async Task<BeaconSeedReservation> ReserveAsync(CancellationToken cancellationToken)
@@ -47,7 +101,7 @@ public sealed class BeaconEntropyProvider(
         try
         {
             var endpoint = BeaconEndpointPolicy.Normalize(configHandler.Data.General.Verification.BeaconEndpoint);
-            var pulse = await beaconClient.GetLatestPulseAsync(endpoint, cancellationToken).ConfigureAwait(false);
+            var pulse = await TakePrefetchedPulseAsync(endpoint, cancellationToken).ConfigureAwait(false);
 
             var state = LoadState();
             var sequence = BeaconSequencePolicy.ResolveNext(state, pulse, out var failure);

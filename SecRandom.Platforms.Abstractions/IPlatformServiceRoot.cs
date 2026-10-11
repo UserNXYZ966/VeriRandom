@@ -13,4 +13,6 @@ public interface IPlatformServiceRoot
     IRemovableStorageBindingMarker RemovableStorageBindingMarker { get; }
 
     IPlatformCameraDeviceCatalog CameraDevices { get; }
+
+    IForegroundWindowService ForegroundWindow { get; }
 }

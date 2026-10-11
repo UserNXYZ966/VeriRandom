@@ -18,6 +18,8 @@ public sealed class PlatformServiceRootStub : IPlatformServiceRoot, IWindowFeatu
 
     public IRemovableStorageCatalog RemovableStorage => UnsupportedRemovableStorageCatalog.Instance;
 
+    public IForegroundWindowService ForegroundWindow => UnsupportedForegroundWindowService.Instance;
+
     public IRemovableStorageBindingMarker RemovableStorageBindingMarker =>
         PortableRemovableStorageBindingMarker.Instance;
 

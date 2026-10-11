@@ -112,6 +112,8 @@ public class Resources
     public static string M_ProofIssue_BeyondHead => Get(nameof(M_ProofIssue_BeyondHead));
     public static string M_ProofIssue_MissingTail => Get(nameof(M_ProofIssue_MissingTail));
     public static string S_BeaconEntropy => Get(nameof(S_BeaconEntropy));
+    public static string S_BeaconPrefetch => Get(nameof(S_BeaconPrefetch));
+    public static string S_BeaconPrefetch_D => Get(nameof(S_BeaconPrefetch_D));
     public static string S_BeaconEntropy_D => Get(nameof(S_BeaconEntropy_D));
     public static string S_BeaconEndpoint => Get(nameof(S_BeaconEndpoint));
     public static string S_BeaconEndpoint_D => Get(nameof(S_BeaconEndpoint_D));

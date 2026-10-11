@@ -89,4 +89,10 @@
   <data name="M_BeaconFetching" xml:space="preserve"><value>正在拉取…</value></data>
   <data name="M_BeaconFetched" xml:space="preserve"><value>脉冲 {0}，链 {1}，时间 {2}</value></data>
   <data name="M_BeaconFailed" xml:space="preserve"><value>拉取失败，请检查网络或地址</value></data>
+  <data name="S_BeaconPrefetch" xml:space="preserve">
+    <value>抽签前预取信标脉冲</value>
+  </data>
+  <data name="S_BeaconPrefetch_D" xml:space="preserve">
+    <value>开始抽签时先异步获取信标脉冲，把网络往返藏在抽签动画里；只预取脉冲本身，序号仍在抽签时预留，因此未被用掉的预取不会消耗序号、也不会在证明链上留下缺口</value>
+  </data>
 </root>

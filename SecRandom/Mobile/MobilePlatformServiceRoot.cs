@@ -85,6 +85,8 @@ public sealed class MobilePlatformServiceRoot : IPlatformServiceRoot, IWindowFea
 
     public IRemovableStorageCatalog RemovableStorage => UnsupportedRemovableStorageCatalog.Instance;
 
+    public IForegroundWindowService ForegroundWindow => SecRandom.Platforms.UnsupportedForegroundWindowService.Instance;
+
     public IRemovableStorageBindingMarker RemovableStorageBindingMarker =>
         PortableRemovableStorageBindingMarker.Instance;
 

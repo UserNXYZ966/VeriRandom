@@ -11,6 +11,13 @@ public partial class VerificationSettingsConfig : ObservableObject
     // instead of the local CSPRNG, so the operator cannot inject custom entropy into the draw.
     [ObservableProperty] private bool _beaconEntropyEnabled;
 
+    // Off by default. When on, a draw may start fetching the beacon pulse a moment before it is needed (the
+    // quick-draw rolling animation is the intended window) so the HTTP round trip hides behind the animation.
+    // Only the *pulse* is prefetched: the per-pulse sequence is still reserved inside ReserveAsync, so a
+    // prefetch whose draw never happens consumes no sequence and leaves no gap in the proof chain. A pulse
+    // that ages past its period before the draw costs the usual half of the trust score, nothing more.
+    [ObservableProperty] private bool _beaconPrefetchEnabled;
+
     // Advanced override. The default is the official NIST Beacon v2 base endpoint; a mirror is allowed
     // because the reference proof records the raw pulse and its signature, so a substituted pulse stays detectable.
     [ObservableProperty] private string _beaconEndpoint = "https://beacon.nist.gov/beacon/2.0/";
