@@ -2776,7 +2776,7 @@ public partial class App : Application
             if (_quickDrawForegroundTarget is { } target)
             {
                 _quickDrawForegroundTarget = null;
-                if (!IsStopping)
+                if (Current is { } app && !app.IsStopping)
                     IAppHost.TryGetService<IForegroundWindowService>()?.TryRestore(target);
             }
         };
