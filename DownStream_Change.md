@@ -782,7 +782,7 @@
 
 接线落在 `App.ShowQuickDrawWindowAsync` 顶部与 `GetOrCreateQuickDrawWindow` 里唯一的 `Closed` 处理器：
 - 捕获**必须早于** `AuthorizeTriggeredDrawAsync`——`ProtectQuickDrawStart` 会弹验证窗，而 `App.GetRootWindow` 自身会 `Activate()` 浮动窗，晚于此处的捕获会记到我们自己的窗口
-- 回落放在 `Closed` 里，因为 `SetForegroundWindow` 一旦失去前台就会被拒；`IsStopping` 时不碰别人的窗口
+- 回落放在 `Closed` 里，因为 `SetForegroundWindow` 一旦失去前台就会被拒；应用正在退出时不碰别人的窗口（**注意写法**：`IsStopping` 是**实例**成员，而承载它的辅助方法与 `Closed` 处理器都是 `static`，所以必须写成 `Current is { } app && !app.IsStopping`——直接写 `IsStopping` 就是 CS0120。这条 CI 报错最初正是它，由 PR #2 修正）
 - 拒绝授权与"外部通知"两条路径会清空捕获（后者根本没有窗口可回落）
 - **IPC/集控路径不走 `ShowQuickDrawWindowAsync`，因此不参与这个开关**
 
@@ -793,6 +793,23 @@
 **未做**：§24 末尾的"永不抢焦点"替代方案仍未采纳。另外顺带查清——`FloatingWindowSettingsConfig.DoNotStealFocus` 是**死设置**：只有 `ControlSettingsLabels` 的标签映射、`SettingsSearchService` 的搜索 id 与 designer 引用它，**没有任何页面绑定、也没有任何运行时代码读它**。本次没有动它。
 
 **⚠️ 一个必须记住的编译边界（本轮第一次 CI 就栽在这里）**：让抽签页显示指纹时，最初把 `ConfigPolicySignatureService` 当作 `RollCallPageViewModel` 的**构造参数**——它是 `internal`，而那个 ViewModel 是 `public`（手机壳与 XAML 都用它），于是 `CS0051`。这与 §21 里那条正好相反：那次能收窄的是**我方**类型，这次消费者是**上游的 public VM，收窄不了**，所以正确做法是**不把它当参数**，改在构造时用 `IAppHost.TryGetService<ConfigPolicySignatureService>()` 静态解析（`ConfigPolicyLock` 早就这么做）。附带好处是保持了"取不到就不显示徽标"的可选语义。**不要把它改回构造注入**——那会重新引入 CS0051，而且编译器只在拥有该 public 成员的程序集里报出来。
+
+---
+
+## 26. 发布说明不再带下载链接表
+
+**变更**：`scripts/gen-release-note.ps1` 不再生成「下载链接」表（原本每个资产两列：GitHub 与 `https://ghproxy.sectl.cn/...` 镜像 ✗）。SHA256 表保留，说明改为「请在下方 **Assets** 中下载文件；下载后请核对 SHA256」。
+
+**为什么**：本分支还没有搭建任何中转/镜像服务，那一列是**死链**；而 GitHub Release 页面本身就在 Assets 里列出全部产物，自造一张链接表只会让用户以为存在第二条下载路径。
+
+**注意**：
+- 发布说明是在**标签处**生成的（`build_publish.yml` 的 `Generate Release Note` 步骤执行 `./scripts/gen-release-note.ps1`），所以这类改动**必须活在被打标签的提交里**，否则发出去的仍是旧说明
+- 脚本仍保留「从正文里剥掉一张自带下载表」的逻辑（`**下载链接**` 标记），这样万一 `$BodyPath` 带着旧表也不会重复
+- `metadata.yaml` 的 `github_mirror.prefix` 仍是 `https://ghproxy.sectl.cn/`——那是给**更新客户端**解析元数据用的另一条路径，本次没有改动；中转服务不存在时客户端的镜像尝试会失败并回退到 GitHub（客户端既有行为）
+- iOS 回填路径（`scripts/ReleaseManifest/Update-ReleaseManifest.ps1`）在本分支**已禁用**，本次没有动它；已确认它**不**造镜像链接（该目录脚本里没有任何 `ghproxy` / `下载链接` / `releases/download` 引用）
+- 顺带修掉两个真实缺陷：
+  1. 脚本原先用 `Get-Content "./ChangeLog.md"` 切行，而本仓库自己的文件是 **LF-only**、上游的是 CRLF；在 **Windows PowerShell 5.1** 下 `Get-Content` 会把多处 LF 断行并成长行，**两个 bullet 因此被并成一行**（产物里肉眼看不见）。现改为 `Get-Content -Raw` + 显式按 `\r\n|\n|\r` 切分，两种 PowerShell 都正确。已用"受控迷你样本 + 真实 ChangeLog"各跑一遍验证：源 10 个 bullet → 产物 10 个 ✓
+  2. 该脚本**必须带 BOM** 保存：它是本仓库唯一含中文字面量的 `.ps1`（其它脚本都是纯 ASCII，所以都没有 BOM），而 5.1 会把无 BOM 脚本按 ANSI 解码，产物里那段中文就成乱码。CI 用 `pwsh`，本来不受影响，加 BOM 是为了保护在 5.1 本地跑这个脚本的人
 
 ---
 
