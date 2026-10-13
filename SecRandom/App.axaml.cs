@@ -1778,7 +1778,7 @@ public partial class App : Application
 
             try
             {
-                // 插件注册的退出收尾（落盘、断连）：按 Priority 升序，整体限时，单个失败不影响其它人。
+                //  插件注册的退出收尾（落盘、断连）：按 Priority 升序，整体限时，单个失败不影响其它人。
                 var participants = IAppHost.TryGetService<IEnumerable<IAppShutdownParticipant>>();
                 if (participants is not null)
                 {
@@ -2776,7 +2776,7 @@ public partial class App : Application
             if (_quickDrawForegroundTarget is { } target)
             {
                 _quickDrawForegroundTarget = null;
-                if (!IsStopping)
+                if (Current is { } app && !app.IsStopping)
                     IAppHost.TryGetService<IForegroundWindowService>()?.TryRestore(target);
             }
         };
