@@ -813,3 +813,13 @@
 
 ---
 
+## 27. About 页：移除横幅占位、接入本分支头像
+
+**变更**：
+1. `Views/SettingsPages/About/AboutSettingsPage.axaml` 的**横幅占位框已删除**。横幅本身仍是可选的（`LoadBanner()` 只认 `Assets/Banners/verirandom-banner-{cn,en,ja}.png`，缺 zh/ja 时回退到 `-en.png`，并**刻意不回退**到上游的 `secrandom-banner-*.png`）；没有独立横幅时页面不再显示任何占位框，只留标题。资源键 `C_BannerPlaceholder` 因此成为**死键**（`Langs/SettingsPages/About/` 三语 resx + designer），本次保留未删。
+2. 新增资源 `SecRandom/Assets/ForkAvatar.png`（164×164 PNG），并把「社区」分组展开器的图标从 Fluent 字形 `PeopleFilled` 换成它——与上游作者分组使用 `AuthorAionflux.png` 的写法完全一致（`<fa:FAImageIconSource Source="/Assets/ForkAvatar.png" />`）。社区分组里那个 180×64 的 `C_CommunityImagePlaceholder` 宽条占位**未动**：方形头像塞不进那个比例。
+
+**注意**：`FAImageIconSource` 指向**不存在**的资源会抛异常，所以这张图必须与代码一起提交（`git status` 里它显示为 `?? SecRandom/Assets/ForkAvatar.png`，容易漏）。
+
+---
+

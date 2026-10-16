@@ -161,23 +161,11 @@
                             </LinearGradientBrush>
                         </Border.OpacityMask>
 
-                        <!-- 横幅占位：VeriRandom 自有横幅尚未提供。补资源后把 Assets/Banners 下放
-                             verirandom-banner-cn.png / -en.png / -ja.png，BannerSource 会自动加载并替换此占位。 -->
+                        <!-- 横幅是可选的：在 Assets/Banners 下放 verirandom-banner-cn.png / -en.png / -ja.png
+                             （缺 zh/ja 时回退到 -en.png），BannerSource 会自动加载。**没有**独立横幅时这里什么
+                             都不显示——原先那个「横幅占位」框已按要求移除。注意横幅不能拿上游 SecRandom 的
+                             素材顶替（见 AboutSettingsPage.axaml.cs 的 LoadBanner）。 -->
                         <Panel>
-                            <Border IsVisible="{Binding BannerSource, Converter={x:Static ObjectConverters.IsNull}}"
-                                    Height="220"
-                                    Margin="24"
-                                    Background="{DynamicResource ControlFillColorSecondaryBrush}"
-                                    BorderBrush="{DynamicResource ControlElevationBorderBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="8">
-                                <TextBlock Text="{x:Static lsa:Resources.C_BannerPlaceholder}"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           TextWrapping="Wrap"
-                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                            </Border>
-
                             <Image Source="{Binding BannerSource}"
                                    Stretch="Uniform"
                                    IsVisible="{Binding BannerSource, Converter={x:Static ObjectConverters.IsNotNull}}" />
@@ -257,8 +245,10 @@
             <fa:FASettingsExpander x:Name="S_Community"
                                    Header="{x:Static lsa:Resources.S_Community}"
                                    Description="{x:Static lsa:Resources.S_Community_D}"
-                                   IconSource="{sr:FluentIconSource {sr:Fi PeopleFilled}}"
                                    IsExpanded="True">
+                <fa:FASettingsExpander.IconSource>
+                    <fa:FAImageIconSource Source="/Assets/ForkAvatar.png" />
+                </fa:FASettingsExpander.IconSource>
                 <fa:FASettingsExpanderItem x:Name="S_Community_QQGroup"
                                            Content="{x:Static lsa:Resources.S_Community_QQGroup}"
                                            Description="{x:Static lsa:Resources.S_Community_QQGroup_D}"
