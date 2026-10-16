@@ -95,4 +95,70 @@
   <data name="S_BeaconPrefetch_D" xml:space="preserve">
     <value>开始抽签时先异步获取信标脉冲，把网络往返藏在抽签动画里；只预取脉冲本身，序号仍在抽签时预留，因此未被用掉的预取不会消耗序号、也不会在证明链上留下缺口</value>
   </data>
+  <data name="C_OpenProofReplay" xml:space="preserve">
+    <value>证明重放</value>
+  </data>
+  <data name="S_ProofReplay" xml:space="preserve">
+    <value>证明重放</value>
+  </data>
+  <data name="C_ProofReplay_LoadRoster" xml:space="preserve">
+    <value>选择名单文件</value>
+  </data>
+  <data name="C_ProofReplay_Run" xml:space="preserve">
+    <value>重放本次抽取</value>
+  </data>
+  <data name="O_ProofReplay_Students" xml:space="preserve">
+    <value>点名</value>
+  </data>
+  <data name="O_ProofReplay_Prizes" xml:space="preserve">
+    <value>抽奖</value>
+  </data>
+  <data name="M_ProofReplay_Empty" xml:space="preserve">
+    <value>还没有可重放的证明文件</value>
+  </data>
+  <data name="M_ProofReplay_Summary" xml:space="preserve">
+    <value>共 {0} 份证明，链序号 {1} 到 {2}；节点按哈希链顺序排列，上面显示的是各自抽取时间</value>
+  </data>
+  <data name="M_ProofReplay_SelectHint" xml:space="preserve">
+    <value>在左侧画布上选择一个节点</value>
+  </data>
+  <data name="M_ProofReplay_NodeDetail" xml:space="preserve">
+    <value>类型：{0}；记录中奖 {1} 项；候选 {2} 项；文件：{3}{4}</value>
+  </data>
+  <data name="M_ProofReplay_NotReplayable" xml:space="preserve">
+    <value>（正式公证无法由本地文件重放：它的随机材料来自服务端签名的锁定凭据）</value>
+  </data>
+  <data name="M_ProofReplay_RosterFailed" xml:space="preserve">
+    <value>名单读取失败：{0}</value>
+  </data>
+  <data name="M_ProofReplay_RosterLoaded" xml:space="preserve">
+    <value>已载入{0}名单，共 {1} 名成员</value>
+  </data>
+  <data name="M_ProofReplay_Reproduced" xml:space="preserve">
+    <value>重放一致：记录的结果正是这些输入必然产生的结果</value>
+  </data>
+  <data name="M_ProofReplay_Mismatch" xml:space="preserve">
+    <value>重放不一致：同样的输入产生了不同的结果</value>
+  </data>
+  <data name="M_ProofReplay_NoLocalSeed" xml:space="preserve">
+    <value>无法重放：正式公证的随机材料不在证明文件里</value>
+  </data>
+  <data name="M_ProofReplay_Unsupported" xml:space="preserve">
+    <value>无法重放：这份证明的负载或引擎版本不受支持</value>
+  </data>
+  <data name="M_ProofReplay_RosterMatches" xml:space="preserve">
+    <value>名单核对一致：这就是本次抽取所用的名单</value>
+  </data>
+  <data name="M_ProofReplay_RosterDiffers" xml:space="preserve">
+    <value>名单核对不一致：这份名单与证明里记录的摘要不同，或该证明根本没有记录名单摘要</value>
+  </data>
+  <data name="M_ProofReplay_RecordedNames" xml:space="preserve">
+    <value>记录的中奖者：{0}</value>
+  </data>
+  <data name="M_ProofReplay_ReplayedNames" xml:space="preserve">
+    <value>重放出的中奖者：{0}</value>
+  </data>
+  <data name="M_ProofReplay_RecordedIds" xml:space="preserve">
+    <value>记录的 recordId 前 8 位：{0}（选择一份名单即可显示姓名）</value>
+  </data>
 </root>

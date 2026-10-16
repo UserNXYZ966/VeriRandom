@@ -17,4 +17,70 @@ It prevents replacement of local draw code, random seeds, or result files during
   <data name="S_BeaconPrefetch_D" xml:space="preserve">
     <value>Starts fetching the beacon pulse when a draw begins so the network round trip hides behind the draw animation; only the pulse is prefetched, the per-pulse sequence is still reserved at draw time, so an unused prefetch consumes no sequence and leaves no gap in the proof chain</value>
   </data>
+  <data name="C_OpenProofReplay" xml:space="preserve">
+    <value>Proof replay</value>
+  </data>
+  <data name="S_ProofReplay" xml:space="preserve">
+    <value>Proof replay</value>
+  </data>
+  <data name="C_ProofReplay_LoadRoster" xml:space="preserve">
+    <value>Choose roster file</value>
+  </data>
+  <data name="C_ProofReplay_Run" xml:space="preserve">
+    <value>Replay this draw</value>
+  </data>
+  <data name="O_ProofReplay_Students" xml:space="preserve">
+    <value>Roll call</value>
+  </data>
+  <data name="O_ProofReplay_Prizes" xml:space="preserve">
+    <value>Lottery</value>
+  </data>
+  <data name="M_ProofReplay_Empty" xml:space="preserve">
+    <value>No replayable proof files yet</value>
+  </data>
+  <data name="M_ProofReplay_Summary" xml:space="preserve">
+    <value>{0} proofs, chain indexes {1} to {2}; nodes follow hash-chain order and show each draw time</value>
+  </data>
+  <data name="M_ProofReplay_SelectHint" xml:space="preserve">
+    <value>Select a node on the canvas</value>
+  </data>
+  <data name="M_ProofReplay_NodeDetail" xml:space="preserve">
+    <value>Type: {0}; recorded winners: {1}; candidates: {2}; file: {3}{4}</value>
+  </data>
+  <data name="M_ProofReplay_NotReplayable" xml:space="preserve">
+    <value> (formal notarization cannot be replayed from the local file: its random material comes from the server-signed lock)</value>
+  </data>
+  <data name="M_ProofReplay_RosterFailed" xml:space="preserve">
+    <value>Could not read the roster: {0}</value>
+  </data>
+  <data name="M_ProofReplay_RosterLoaded" xml:space="preserve">
+    <value>Loaded a {0} roster with {1} members</value>
+  </data>
+  <data name="M_ProofReplay_Reproduced" xml:space="preserve">
+    <value>Reproduced: the recorded result is exactly what these inputs produce</value>
+  </data>
+  <data name="M_ProofReplay_Mismatch" xml:space="preserve">
+    <value>Mismatch: the same inputs produced a different result</value>
+  </data>
+  <data name="M_ProofReplay_NoLocalSeed" xml:space="preserve">
+    <value>Cannot replay: formal notarization keeps its random material off the device</value>
+  </data>
+  <data name="M_ProofReplay_Unsupported" xml:space="preserve">
+    <value>Cannot replay: this proof's payload or engine version is not supported</value>
+  </data>
+  <data name="M_ProofReplay_RosterMatches" xml:space="preserve">
+    <value>Roster matches: this is the list this draw used</value>
+  </data>
+  <data name="M_ProofReplay_RosterDiffers" xml:space="preserve">
+    <value>Roster differs: this file does not match the digest recorded in the proof, or the proof recorded none</value>
+  </data>
+  <data name="M_ProofReplay_RecordedNames" xml:space="preserve">
+    <value>Recorded winners: {0}</value>
+  </data>
+  <data name="M_ProofReplay_ReplayedNames" xml:space="preserve">
+    <value>Replayed winners: {0}</value>
+  </data>
+  <data name="M_ProofReplay_RecordedIds" xml:space="preserve">
+    <value>Recorded recordId prefixes: {0} (choose a roster to show names)</value>
+  </data>
 </root>

@@ -1072,7 +1072,8 @@ public partial class App : Application
                         .AddView<MobileRootView>(MobilePageIds.Root)
                         .AddView<MainView>(DesktopViewIds.Main)
                         .AddView<SettingsView>(MobilePageIds.Settings)
-                        .AddView<RemainingListView>(RemainingListViewService.ViewId);
+                        .AddView<RemainingListView>(RemainingListViewService.ViewId)
+                        .AddView<ProofReplayView>(ProofReplayViewService.ViewId);
                     services.AddTransient<MobileViewHost>();
                 }
                 else
@@ -1091,7 +1092,8 @@ public partial class App : Application
                         .AddView<MainView>(DesktopViewIds.Main)
                         .AddView<SettingsView>(DesktopViewIds.Settings)
                         .AddView<RemainingListView>(RemainingListViewService.ViewId, ViewPresentation.Modal)
-                        .AddView<TimerView>(TimerViewService.ViewId, ViewPresentation.Modal);
+                        .AddView<TimerView>(TimerViewService.ViewId, ViewPresentation.Modal)
+                        .AddView<ProofReplayView>(ProofReplayViewService.ViewId, ViewPresentation.Modal);
                 }
 
                 // 日志
@@ -1335,6 +1337,10 @@ public partial class App : Application
                     // 手机端没有本地集控节点，但 LinkageDrawCoordinator 仍然要求这个闸门可解析。
                     services.AddSingleton<IControlDrawGate, UnlockedControlDrawGate>();
                 }
+                // 证明重放：文件访问留在应用层（ProofReplayFileService），真正的重放是无文件 I/O 的 Core
+                // ProofReplayService。手机与平板同样会打开这个窗口，所以注册在共享分支。
+                services.AddSingleton<ProofReplayFileService>();
+                services.AddSingleton<ProofReplayViewService>();
                 services.AddSingleton<SecuritySettingsStore>();
                 services.AddSingleton<SecurityCredentialStore>();
                 services.AddSingleton<IUsbDeviceCatalog, UsbDeviceCatalog>();

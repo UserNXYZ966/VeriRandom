@@ -530,6 +530,12 @@ public partial class VerificationSettingsPage : UserControl
         ExternalLauncher.TryOpenUri("https://fair.sectl.cn/");
     }
 
+    private void OpenProofReplay_OnClick(object? sender, RoutedEventArgs e)
+    {
+        // 重放窗口是独立的模态视图，它打开时自己重新读取证明链，所以这里只负责打开，不预先加载数据。
+        _ = IAppHost.GetService<ProofReplayViewService>().ShowAsync();
+    }
+
     public int SelectedStorageIndex
     {
         get => Array.IndexOf(StorageOptions, ConfigHandler.Data.General.ProofRetention.MaximumStorageBytes) is var index && index >= 0

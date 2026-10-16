@@ -117,6 +117,8 @@
                                 Click="OpenProofFolder_OnClick" />
                         <Button Content="{x:Static lv:Resources.C_OpenVerificationWebsite}"
                                 Click="OpenVerificationWebsite_OnClick" />
+                        <Button Content="{x:Static lv:Resources.C_OpenProofReplay}"
+                                Click="OpenProofReplay_OnClick" />
                     </StackPanel>
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>

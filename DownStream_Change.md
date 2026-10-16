@@ -823,3 +823,26 @@
 
 ---
 
+## 28. 证明重放：从"可信与否"到"本该是谁被抽中"
+
+**背景**：此前的证明只给出可信度评分，无法回答"按这份证明本该抽中谁"。调查结论是**材料早已齐备**：`payload` 是 base64url 的二进制帧，其中含**明文种子**（偏移 17..48）与每个候选的裸 `RecordId` + `weightMicros` + `occurrenceIndex` + `isGuaranteed`，响应帧里是**裸 Guid 的中奖者**（无盐）。缺的只是解码器与重放器。
+
+**本轮改动（全部在 Core，保持无文件 I/O）**：
+- `VerificationWireCodec` 新增 `TryDecodeProofPayload` / `TryDecodeDrawRequest`（并补上缺失的 `ReadByte` / `ReadInt64` 私有助手）——此前这段帧布局知识在 `VerificationDrawCoordinator` 与 `WitnessClient` 里**各重复实现一遍**，现在有了唯一解码入口
+- 新增 `ProofReplayService.Replay(payload, mode, engineVersion)`：解码 → `ManagedVerificationKernel.Draw` → 与记录的中奖者**逐位置**比对，返回 `Reproduced` / `Mismatch` / `NoLocalSeed`（正式公证的种子来自服务端签名的锁单，文件里那 32 字节是**全零**，不可由文件重放）/ `UnsupportedFormat`（负载解不开或引擎版本不符）
+- 新增 `SecRandom.Core.Tests/ProofReplayTests.cs`：往返成功 + 篡改中奖者 → `Mismatch` + 篡改权重 → `Mismatch` + 正式公证 → `NoLocalSeed` + 异版本/垃圾负载 → 拒绝而不抛
+
+**必须遵守的两条**：
+- **只重放"抽样"这一步**：候选池、权重、抽样模式、数量一律取**记录里的**，绝不能拿当前名单或当前历史重算（那会重放另一次抽取，而不是证明所描述的那次）
+- 重放证明的是"**记录输入 → 记录结果**"的自洽，**不是**内核无偏（那是 `scripts/FairnessAudit/` 统计线的职责），也**不能**证明种子诚实随机、名单就是真实班级名单、抽前没有筛过名单
+
+**应用层与界面（本轮已完成）**：
+- `SecRandom/Services/Verification/ProofReplayFileService.cs`：遍历 `DrawProofExportService.EnumerateProofPaths()`（`data/proofs/<yyyy-MM>/<yyyy-MM-dd>/*.srproof.json` 是**递归**布局，没有扁平目录），按 `proof.Chain.Index` 排序；base64url 自行解析（不依赖 `WitnessClient` 里那些 `internal` 助手）；名单文件按根属性 `prizes` / `students` 判别后用 `ConfigServiceBase.JsonOptions` 反序列化（注意 `Name` 是 `[JsonIgnore]`，名单名来自文件名），并以 `RosterDigest.Compute` 与审计负载里的 `rosterDigest` 比对——**该字段不是证明的独立字段**，藏在 `auditPayload` 的 JSON 里，且"抽取时的活动档案 ≠ 被抽名单"时会被**静默省略**
+- `SecRandom/Services/Verification/ProofReplayViewService.cs` + `Views/Verification/ProofReplayView.axaml(.cs)`：独立**模态**视图（view id `main.proofReplay`、桌面用 `ViewPresentation.Modal` + `NewHost` 开新窗口）。**不可编辑画布**：`Canvas` + 双向 `ScrollViewer`，节点按链序等间距排布，节点上显示**抽取时间**与链序号，节点间画连线；只能点击选中，无拖动、无缩放。右侧面板显示选中节点详情、选择名单、执行重放，并列出**记录**与**重放**的中奖者（给了名单就显示**姓名**，否则显示 recordId 前 8 位）
+- 入口：抽取验证页 `S_ProofFolder` 行的第三个按钮 `C_OpenProofReplay` → `OpenProofReplay_OnClick`
+- **手机分支也必须注册该视图**：`App.axaml.cs` 有两处视图链（手机分支 `AddView<MobileRootView>…` 不带 presentation 参数，桌面分支带 `ViewPresentation.Modal`），而该设置页在**所有宿主**上都注册，只注册桌面会让手机端点按钮抛 `KeyNotFoundException`。两个服务注册在**共享**分支
+- 文案 22 个键复用**抽取验证页自己的**本地化目录（`Langs/SettingsPages/General/Verification/`，该目录 designer 是 `Get(nameof(...))` 简式），三语齐备、无 `。` 结尾；没有新建目录，因为该视图就是该页的一个入口
+- **已知限制**：`ProofChainHead` 不暴露 `RemovedIndices`（保留期删除记录只存在于 `internal` 的文档类型里），所以窗口只能显示 `RetainedFromIndex` 以下的"保留期截断"，无法区分"保留期删除"与"真正的缺口"；名单摘要缺失时核对结果会显示"不一致"而不是"未知"（文案已把这两种情况合并说明）
+
+---
+

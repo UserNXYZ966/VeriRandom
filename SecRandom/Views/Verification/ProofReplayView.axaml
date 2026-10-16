@@ -1,0 +1,74 @@
+<local:ProofReplayView xmlns="https://github.com/avaloniaui"
+                       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                       xmlns:local="using:SecRandom.Views.Verification"
+                       xmlns:lv="using:SecRandom.Langs.SettingsPages.General.Verification"
+                       x:Class="SecRandom.Views.Verification.ProofReplayView"
+                       x:DataType="local:ProofReplayView"
+                       NavigationPage.HasBackButton="True"
+                       NavigationPage.HasNavigationBar="True">
+    <local:ProofReplayView.Styles>
+        <!-- 链条上的节点：只有"选中"与"未选中"两种观感，不引入任何新的主题资源，避免主题缺失导致渲染失败 -->
+        <Style Selector="Border.chainNode">
+            <Setter Property="Width" Value="112" />
+            <Setter Property="Height" Value="60" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Opacity" Value="0.8" />
+            <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlElevationBorderBrush}" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Border.chainNode.selected">
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+        <Style Selector="Line.chainLink">
+            <Setter Property="Stroke" Value="{DynamicResource ControlElevationBorderBrush}" />
+            <Setter Property="StrokeThickness" Value="2" />
+        </Style>
+    </local:ProofReplayView.Styles>
+
+    <Grid ColumnDefinitions="*,360" RowDefinitions="Auto,*" Margin="12">
+        <TextBlock x:Name="SummaryText"
+                   Grid.Row="0" Grid.ColumnSpan="2"
+                   Margin="0 0 0 8"
+                   TextWrapping="Wrap"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+        <!-- 自由画布：只做展示与选择，不提供任何拖动/编辑 -->
+        <ScrollViewer Grid.Row="1" Grid.Column="0"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+            <Canvas x:Name="ChainCanvas" Background="Transparent" Height="240" />
+        </ScrollViewer>
+
+        <Border Grid.Row="1" Grid.Column="1"
+                Margin="12 0 0 0" Padding="12"
+                CornerRadius="8"
+                Background="{DynamicResource ControlFillColorSecondaryBrush}">
+            <ScrollViewer>
+                <StackPanel Spacing="8">
+                    <TextBlock x:Name="SelectedTitleText" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock x:Name="SelectedDetailText" FontSize="12" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <Separator Margin="0 4" />
+                    <Button x:Name="LoadRosterButton"
+                            HorizontalAlignment="Stretch"
+                            Content="{x:Static lv:Resources.C_ProofReplay_LoadRoster}"
+                            Click="LoadRoster_OnClick" />
+                    <TextBlock x:Name="RosterText" FontSize="12" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <Button x:Name="ReplayButton"
+                            Classes="accent"
+                            HorizontalAlignment="Stretch"
+                            IsEnabled="False"
+                            Content="{x:Static lv:Resources.C_ProofReplay_Run}"
+                            Click="Replay_OnClick" />
+                    <TextBlock x:Name="ReplayStatusText" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock x:Name="ReplayDetailText" FontSize="12" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</local:ProofReplayView>

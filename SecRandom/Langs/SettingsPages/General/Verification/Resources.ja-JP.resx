@@ -17,4 +17,70 @@
   <data name="S_BeaconPrefetch_D" xml:space="preserve">
     <value>抽選の開始時にビーコンのパルス取得を先に始め、通信の待ち時間を抽選アニメーションの裏に隠します（先読みするのはパルスだけで、連番は抽選時に確保するため、使われなかった先読みは消費されません）</value>
   </data>
+  <data name="C_OpenProofReplay" xml:space="preserve">
+    <value>証明の再現</value>
+  </data>
+  <data name="S_ProofReplay" xml:space="preserve">
+    <value>証明の再現</value>
+  </data>
+  <data name="C_ProofReplay_LoadRoster" xml:space="preserve">
+    <value>名簿ファイルを選ぶ</value>
+  </data>
+  <data name="C_ProofReplay_Run" xml:space="preserve">
+    <value>この抽選を再現する</value>
+  </data>
+  <data name="O_ProofReplay_Students" xml:space="preserve">
+    <value>点呼</value>
+  </data>
+  <data name="O_ProofReplay_Prizes" xml:space="preserve">
+    <value>抽選</value>
+  </data>
+  <data name="M_ProofReplay_Empty" xml:space="preserve">
+    <value>再現できる証明ファイルがまだありません</value>
+  </data>
+  <data name="M_ProofReplay_Summary" xml:space="preserve">
+    <value>証明 {0} 件、チェーン番号 {1} から {2}。ノードはハッシュチェーンの順に並び、各抽選時刻を表示します</value>
+  </data>
+  <data name="M_ProofReplay_SelectHint" xml:space="preserve">
+    <value>左のキャンバスでノードを選択してください</value>
+  </data>
+  <data name="M_ProofReplay_NodeDetail" xml:space="preserve">
+    <value>種類：{0}；記録された当選 {1}；候補 {2}；ファイル：{3}{4}</value>
+  </data>
+  <data name="M_ProofReplay_NotReplayable" xml:space="preserve">
+    <value>（正式公証はローカルファイルから再現できません：乱数材料はサーバー署名済みのロックに由来します）</value>
+  </data>
+  <data name="M_ProofReplay_RosterFailed" xml:space="preserve">
+    <value>名簿を読み込めませんでした：{0}</value>
+  </data>
+  <data name="M_ProofReplay_RosterLoaded" xml:space="preserve">
+    <value>{0}の名簿を読み込みました（{1} 名）</value>
+  </data>
+  <data name="M_ProofReplay_Reproduced" xml:space="preserve">
+    <value>再現一致：記録された結果はこの入力から必然的に得られる結果です</value>
+  </data>
+  <data name="M_ProofReplay_Mismatch" xml:space="preserve">
+    <value>再現不一致：同じ入力から異なる結果が得られました</value>
+  </data>
+  <data name="M_ProofReplay_NoLocalSeed" xml:space="preserve">
+    <value>再現できません：正式公証の乱数材料は端末上にありません</value>
+  </data>
+  <data name="M_ProofReplay_Unsupported" xml:space="preserve">
+    <value>再現できません：この証明のペイロードまたはエンジン版数は未対応です</value>
+  </data>
+  <data name="M_ProofReplay_RosterMatches" xml:space="preserve">
+    <value>名簿一致：これは今回の抽選で使われた名簿です</value>
+  </data>
+  <data name="M_ProofReplay_RosterDiffers" xml:space="preserve">
+    <value>名簿不一致：この名簿は証明に記録されたダイジェストと一致しません（記録がない場合も含みます）</value>
+  </data>
+  <data name="M_ProofReplay_RecordedNames" xml:space="preserve">
+    <value>記録された当選者：{0}</value>
+  </data>
+  <data name="M_ProofReplay_ReplayedNames" xml:space="preserve">
+    <value>再現された当選者：{0}</value>
+  </data>
+  <data name="M_ProofReplay_RecordedIds" xml:space="preserve">
+    <value>記録された recordId の先頭 8 文字：{0}（名簿を選ぶと氏名を表示します）</value>
+  </data>
 </root>

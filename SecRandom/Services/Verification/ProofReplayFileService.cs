@@ -1,0 +1,253 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using SecRandom.Core.Abstraction;
+using SecRandom.Core.Models.Verification;
+using SecRandom.Core.Services.Verification;
+using SecRandom.Shared.Models.Profile;
+using SecRandom.Shared.Models.Verification;
+
+namespace SecRandom.Services.Verification;
+
+/// <summary>One proof as the replay window needs it: where it sits in the chain, when it was drawn, and the bytes
+/// needed to replay it. The payload bytes are kept in memory because the window replays on user command. </summary>
+public sealed record ProofReplayNode(
+    string Path,
+    string FileName,
+    long ChainIndex,
+    DateTimeOffset CreatedAtUtc,
+    VerificationDrawKind Kind,
+    VerificationProofMode Mode,
+    int CandidateCount,
+    int WinnerCount,
+    bool HasRosterDigest,
+    string EngineVersion,
+    IReadOnlyList<Guid> WinnerRecordIds,
+    byte[] Payload,
+    string AuditPayloadBase64,
+    string? DecodeError)
+{
+    /// <summary>Formal notarization stores a zero seed, so only an ordinary proof can be replayed from its file.</summary>
+    public bool CanReplay => DecodeError is null && Mode == VerificationProofMode.OfflineReproducible;
+}
+
+/// <summary>A roster the user picked, ready to resolve winner record ids back to names.</summary>
+public sealed record ProofRosterContext(
+    string Kind,
+    IReadOnlyDictionary<Guid, string> Names,
+    string Digest);
+
+/// <summary>Result of replaying one node, including the roster check when a roster was supplied.</summary>
+public sealed record ProofReplayOutcome(
+    ProofReplayReport Report,
+    bool? RosterMatches,
+    IReadOnlyList<string> RecordedWinnerNames,
+    IReadOnlyList<string> ReplayedWinnerNames);
+
+/// <summary>
+///     App-layer shell around <see cref="ProofReplayService" />: it owns the file access that Core is deliberately
+///     kept out of (walking <c>data/proofs</c>, reading proofs and rosters, decoding base64url) and leaves the
+///     actual replay to the pure Core service.
+/// </summary>
+public sealed class ProofReplayFileService(
+    DrawProofExportService proofExporter,
+    ILogger<ProofReplayFileService> logger)
+{
+    /// <summary>
+    ///     Every retained proof in hash-chain order. A proof without a chain block cannot be placed in the chain and
+    ///     is skipped with a log line rather than dropped silently.
+    /// </summary>
+    public IReadOnlyList<ProofReplayNode> LoadNodes()
+    {
+        var nodes = new List<ProofReplayNode>();
+        foreach (var path in proofExporter.EnumerateProofPaths())
+        {
+            if (!proofExporter.TryRead(path, out var proof) || proof is null)
+            {
+                logger.LogWarning("证明重放：无法读取证明文件 {Path}", path);
+                continue;
+            }
+
+            if (proof.Chain is null)
+            {
+                logger.LogWarning("证明重放：证明 {Path} 没有链信息，无法定位其在链中的位置", path);
+                continue;
+            }
+
+            nodes.Add(Describe(path, proof));
+        }
+
+        return nodes.OrderBy(node => node.ChainIndex).ToArray();
+    }
+
+    /// <summary>
+    ///     Reads a roster the user selected. Student lists and prize pools are distinguished by their root property,
+    ///     because the stored JSON carries no kind marker of its own.
+    /// </summary>
+    public ProofRosterContext? LoadRoster(string path, out string? error)
+    {
+        error = null;
+        try
+        {
+            var json = File.ReadAllText(path);
+            var options = ConfigServiceBase.JsonOptions;
+
+            if (json.Contains("\"prizes\"", StringComparison.Ordinal))
+            {
+                var prizes = JsonSerializer.Deserialize<PrizeList>(json, options);
+                return prizes is null ? null : new ProofRosterContext("prize", Names(prizes), RosterDigest.Compute(prizes));
+            }
+
+            var students = JsonSerializer.Deserialize<StudentList>(json, options);
+            return students is null ? null : new ProofRosterContext("student", Names(students), RosterDigest.Compute(students));
+        }
+        catch (Exception exception) when (exception is IOException or JsonException)
+        {
+            error = exception.Message;
+            logger.LogWarning(exception, "证明重放：读取名单文件 {Path} 失败", path);
+            return null;
+        }
+    }
+
+    /// <summary>Replays one node and, when a roster was supplied, resolves both winner sets to names.</summary>
+    public ProofReplayOutcome Replay(ProofReplayNode node, ProofRosterContext? roster)
+    {
+        var report = node.DecodeError is null
+            ? ProofReplayService.Replay(node.Payload, node.Mode, node.EngineVersion)
+            : new ProofReplayReport(ProofReplayStatus.UnsupportedFormat, [], [], node.DecodeError);
+
+        bool? rosterMatches = null;
+        if (roster is not null)
+        {
+            var recordedDigest = ReadRosterDigest(node.AuditPayloadBase64);
+            rosterMatches = recordedDigest is not null
+                && string.Equals(recordedDigest, roster.Digest, StringComparison.Ordinal);
+        }
+
+        return new ProofReplayOutcome(
+            report,
+            rosterMatches,
+            ResolveNames(report.RecordedWinners, roster),
+            ResolveNames(report.ReplayedWinners, roster));
+    }
+
+    private static IReadOnlyList<string> ResolveNames(
+        IReadOnlyList<VerificationWinner> winners,
+        ProofRosterContext? roster)
+    {
+        if (roster is null)
+            return [];
+
+        return winners
+            .Select(winner => roster.Names.TryGetValue(winner.RecordId, out var name) && !string.IsNullOrWhiteSpace(name)
+                ? name
+                : winner.RecordId.ToString("N"))
+            .ToArray();
+    }
+
+    private ProofReplayNode Describe(string path, DrawProof proof)
+    {
+        var payload = TryFromBase64Url(proof.Payload);
+        string? decodeError = null;
+        var kind = VerificationDrawKind.Student;
+        var candidateCount = 0;
+        var winnerCount = proof.Result.WinnerRecordIds.Count;
+
+        if (payload is null)
+        {
+            decodeError = "payload 不是有效的 base64url";
+        }
+        else if (VerificationWireCodec.TryDecodeProofPayload(payload, out var input, out _, out var recorded))
+        {
+            kind = input.Kind;
+            candidateCount = input.Candidates.Count;
+            winnerCount = recorded.Winners.Count;
+        }
+        else
+        {
+            decodeError = "payload 无法解码为本版本可识别的抽取输入";
+        }
+
+        return new ProofReplayNode(
+            path,
+            System.IO.Path.GetFileName(path),
+            proof.Chain!.Index,
+            proof.CreatedAtUtc,
+            kind,
+            proof.Mode,
+            candidateCount,
+            winnerCount,
+            ReadRosterDigest(proof.AuditPayload) is not null,
+            proof.AlgorithmEngineVersion,
+            proof.Result.WinnerRecordIds,
+            payload ?? [],
+            proof.AuditPayload,
+            decodeError);
+    }
+
+    /// <summary>
+    ///     The roster digest is not a field of its own: it lives inside the anonymous audit payload, so it is read out
+    ///     of that JSON rather than modelled. A missing digest is normal (the coordinator omits it when the drawn
+    ///     list was not the active profile).
+    /// </summary>
+    private static string? ReadRosterDigest(string auditPayloadBase64)
+    {
+        var bytes = TryFromBase64Url(auditPayloadBase64);
+        if (bytes is null)
+            return null;
+
+        try
+        {
+            using var document = JsonDocument.Parse(bytes);
+            return document.RootElement.TryGetProperty("rosterDigest", out var digest)
+                && digest.ValueKind == JsonValueKind.String
+                ? digest.GetString()
+                : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static Dictionary<Guid, string> Names(StudentList list) =>
+        list.Students
+            .GroupBy(student => student.RecordId)
+            .ToDictionary(group => group.Key, group => group.First().Name);
+
+    private static Dictionary<Guid, string> Names(PrizeList list) =>
+        list.Prizes
+            .GroupBy(prize => prize.RecordId)
+            .ToDictionary(group => group.Key, group => group.First().Name);
+
+    /// <summary>base64url without padding, as the proof writer produced it.</summary>
+    private static byte[]? TryFromBase64Url(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return null;
+
+        var normalized = text.Replace('-', '+').Replace('_', '/');
+        normalized = (normalized.Length % 4) switch
+        {
+            2 => normalized + "==",
+            3 => normalized + "=",
+            0 => normalized,
+            _ => string.Empty
+        };
+
+        if (normalized.Length == 0)
+            return null;
+
+        try
+        {
+            return Convert.FromBase64String(normalized);
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
+    }
+}
