@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
 using Avalonia.Interactivity;
-using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using SecRandom.Core.Services.Verification;
 using SecRandom.Core.Views;
@@ -76,15 +76,14 @@ public sealed partial class ProofReplayView : ViewBase
                 var link = new Line
                 {
                     StartPoint = new Avalonia.Point(left - NodeSpacing + NodeWidth, NodeTop + NodeHeight / 2),
-                    EndPoint = new Avalonia.Point(left, NodeTop + NodeHeight / 2),
-                    Classes = { "chainLink" }
+                    EndPoint = new Avalonia.Point(left, NodeTop + NodeHeight / 2)
                 };
+                link.Classes.Add("chainLink");
                 ChainCanvas.Children.Add(link);
             }
 
             var border = new Border
             {
-                Classes = { "chainNode" },
                 Child = new StackPanel
                 {
                     VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
@@ -101,12 +100,12 @@ public sealed partial class ProofReplayView : ViewBase
                         {
                             Text = $"#{node.ChainIndex}",
                             FontSize = 11,
-                            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
-                            Foreground = TryBrush("TextFillColorSecondaryBrush")
+                            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center
                         }
                     }
                 }
             };
+            border.Classes.Add("chainNode");
 
             border.PointerPressed += (_, _) => Select(node);
             Canvas.SetLeft(border, left);
@@ -121,7 +120,7 @@ public sealed partial class ProofReplayView : ViewBase
         _selected = node;
 
         foreach (var (path, border) in _nodeBorders)
-            border.Classes.Set("selected", string.Equals(path, node.Path, StringComparison.Ordinal));
+            SetSelectedClass(border, string.Equals(path, node.Path, StringComparison.Ordinal));
 
         SelectedTitleText.Text = $"#{node.ChainIndex}  {node.CreatedAtUtc.ToLocalTime():yyyy-MM-dd HH:mm:ss}";
         SelectedDetailText.Text = string.Format(
@@ -204,6 +203,17 @@ public sealed partial class ProofReplayView : ViewBase
         ReplayDetailText.Text = string.Join("\n", lines);
     }
 
-    private IBrush? TryBrush(string key) =>
-        this.TryFindResource(key, out var resource) && resource is IBrush brush ? brush : null;
+    // 选中态用类名切换，而不是在代码里塞颜色：样式表里定义观感，代码只负责"谁被选中"。
+    private static void SetSelectedClass(Border border, bool selected)
+    {
+        if (selected)
+        {
+            if (!border.Classes.Contains("selected"))
+                border.Classes.Add("selected");
+        }
+        else
+        {
+            border.Classes.Remove("selected");
+        }
+    }
 }

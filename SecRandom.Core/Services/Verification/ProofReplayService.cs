@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using SecRandom.Core.Models.Verification;
 using SecRandom.Shared.Models.Verification;
 
 namespace SecRandom.Core.Services.Verification;

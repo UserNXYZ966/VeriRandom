@@ -110,6 +110,7 @@ using SecRandom.ViewModels.SettingsPages;
 using SecRandom.ViewModels.SettingsPages.History;
 using SecRandom.Views;
 using SecRandom.Views.MainPages;
+using SecRandom.Views.Verification;
 using SecRandom.Views.SettingsPages;
 using SecRandom.Views.SettingsPages.About;
 using SecRandom.Views.SettingsPages.Announcements;
