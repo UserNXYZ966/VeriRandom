@@ -440,9 +440,9 @@ namespace SecRandom.Langs.SettingsPages.About {
             }
         }
         
-        public static string C_CommunityImagePlaceholder {
+        public static string C_CommunityImage {
             get {
-                return ResourceManager.GetString("C_CommunityImagePlaceholder", resourceCulture);
+                return ResourceManager.GetString("C_CommunityImage", resourceCulture);
             }
         }
 

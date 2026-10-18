@@ -289,19 +289,12 @@
                                            Click="UriNavigationCommands_OnClick"
                                            CommandParameter="https://github.com/WinFunan/VeriRandom/blob/master/CONTRIBUTING.md" />
 
-                <!-- 图像占位：本分支社区图片尚未提供，补资源时把下面的 Border 换成 Image 并保留同一 x:Name -->
-                <fa:FASettingsExpanderItem x:Name="C_CommunityImagePlaceholder"
-                                           Content="{x:Static lsa:Resources.C_CommunityImagePlaceholder}">
+                <!-- 本分支社区图片：WinFunan.png（200×200 方形，按高度 64 等比缩放）。
+                     这一行曾叫 C_CommunityImagePlaceholder，补上资源后已改名为 C_CommunityImage -->
+                <fa:FASettingsExpanderItem x:Name="C_CommunityImage"
+                                           Content="{x:Static lsa:Resources.C_CommunityImage}">
                     <fa:FASettingsExpanderItem.Footer>
-                        <Border Width="180" Height="64"
-                                Background="{DynamicResource ControlFillColorSecondaryBrush}"
-                                BorderBrush="{DynamicResource ControlElevationBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="8">
-                            <sr:FluentIcon Glyph="{sr:Fi FolderOpenFilled}"
-                                          HorizontalAlignment="Center"
-                                          VerticalAlignment="Center" />
-                        </Border>
+                        <Image Source="/Assets/WinFunan.png" Height="64" Stretch="Uniform" />
                     </fa:FASettingsExpanderItem.Footer>
                 </fa:FASettingsExpanderItem>
             </fa:FASettingsExpander>

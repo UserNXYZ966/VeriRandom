@@ -817,7 +817,7 @@
 
 **变更**：
 1. `Views/SettingsPages/About/AboutSettingsPage.axaml` 的**横幅占位框已删除**。横幅本身仍是可选的（`LoadBanner()` 只认 `Assets/Banners/verirandom-banner-{cn,en,ja}.png`，缺 zh/ja 时回退到 `-en.png`，并**刻意不回退**到上游的 `secrandom-banner-*.png`）；没有独立横幅时页面不再显示任何占位框，只留标题。资源键 `C_BannerPlaceholder` 因此成为**死键**（`Langs/SettingsPages/About/` 三语 resx + designer），本次保留未删。
-2. 新增资源 `SecRandom/Assets/ForkAvatar.png`（164×164 PNG），并把「社区」分组展开器的图标从 Fluent 字形 `PeopleFilled` 换成它——与上游作者分组使用 `AuthorAionflux.png` 的写法完全一致（`<fa:FAImageIconSource Source="/Assets/ForkAvatar.png" />`）。社区分组里那个 180×64 的 `C_CommunityImagePlaceholder` 宽条占位**未动**：方形头像塞不进那个比例。
+2. 新增资源 `SecRandom/Assets/ForkAvatar.png`（164×164 PNG），并把「社区」分组展开器的图标从 Fluent 字形 `PeopleFilled` 换成它——与上游作者分组使用 `AuthorAionflux.png` 的写法完全一致（`<fa:FAImageIconSource Source="/Assets/ForkAvatar.png" />`）。社区分组里那个宽条占位已替换为 `Assets/WinFunan.png`（200×200，按高度 64 等比缩放）；行文案已从「资源待补：本分支社区图片（占位）」改为「社区图片」。键名已在补上资源后从 `C_CommunityImagePlaceholder` 改名为 **`C_CommunityImage`**（三份 resx + designer + XAML 的 `x:Name` 与 `Content` 一并改），全仓代码与资源中已无旧名，旧名只作为历史说明留在该行注释与本节里。
 
 **注意**：`FAImageIconSource` 指向**不存在**的资源会抛异常，所以这张图必须与代码一起提交（`git status` 里它显示为 `?? SecRandom/Assets/ForkAvatar.png`，容易漏）。
 
