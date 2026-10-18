@@ -9,6 +9,7 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using FluentAvalonia.UI.Controls;
 using SecRandom.Core.Services.Verification;
 using SecRandom.Core.Views;
 using SecRandom.Services.Verification;
@@ -137,6 +138,7 @@ public sealed partial class ProofReplayView : ViewBase
             node.CanReplay ? string.Empty : LR.M_ProofReplay_NotReplayable);
 
         ReplayButton.IsEnabled = node.CanReplay;
+        UseCurrentRosterButton.IsEnabled = true;
         ReplayStatusText.Text = string.Empty;
         ReplayDetailText.Text = string.Empty;
         AssessTrustButton.IsEnabled = true;
@@ -163,6 +165,102 @@ public sealed partial class ProofReplayView : ViewBase
                 ChainScroll.Offset.Y),
             DispatcherPriority.Background);
     }
+
+    /// <summary>
+    ///     Takes the roster that is active right now, for the draw kind of the selected node, and shows it first.
+    /// </summary>
+    /// <remarks>
+    ///     The preview is not decoration: this input is the only thing the window does not take from the proof, so the
+    ///     user has to be able to confirm that the list about to be used really is the one the class is looking at.
+    ///     The draw kind comes from the selected node, so a prize draw previews the current prize pool.
+    /// </remarks>
+    private async void UseCurrentRoster_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_selected is not { } node || TopLevel.GetTopLevel(this) is not { } topLevel)
+            return;
+
+        if (!_replayService.TryLoadActiveRoster(node.Kind, out var snapshot) || snapshot is null)
+        {
+            RosterText.Text = string.Format(LR.M_ProofReplay_NoActiveRoster, KindLabel(node.Kind));
+            return;
+        }
+
+        var dialog = new FAContentDialog
+        {
+            Title = LR.C_ProofReplay_UseCurrentRoster,
+            Content = BuildRosterPreview(snapshot),
+            PrimaryButtonText = LR.C_ProofReplay_UseThisRoster,
+            CloseButtonText = LR.C_ProofReplay_Cancel,
+            DefaultButton = FAContentDialogButton.Close
+        };
+
+        if (await dialog.ShowAsync(topLevel) != FAContentDialogResult.Primary)
+            return;
+
+        _roster = snapshot.Context;
+        RosterText.Text = string.Format(LR.M_ProofReplay_RosterLoaded, KindLabel(node.Kind), snapshot.Members.Count);
+    }
+
+    /// <summary>
+    ///     Read-only listing of the members the reference is about to cover. It shows what the digest actually
+    ///     commits — number and name, plus the group/gender or quantity that also enters it — so a wrong list is
+    ///     recognisable before it is used.
+    /// </summary>
+    private static Control BuildRosterPreview(ProofRosterSnapshot snapshot)
+    {
+        var rows = new StackPanel { Spacing = 2 };
+        foreach (var member in snapshot.Members)
+        {
+            var row = new StackPanel
+            {
+                Orientation = Avalonia.Layout.Orientation.Horizontal,
+                Spacing = 8
+            };
+
+            row.Children.Add(new TextBlock { Text = member.Number, MinWidth = 72, FontSize = 12 });
+            row.Children.Add(new TextBlock { Text = member.Name, FontSize = 12, TextWrapping = TextWrapping.Wrap });
+            if (member.Trailing.Length > 0)
+                row.Children.Add(new TextBlock { Text = member.Trailing, FontSize = 12 });
+            if (!member.Enabled)
+            {
+                row.Children.Add(new TextBlock
+                {
+                    Text = LR.M_ProofReplay_RosterDisabled,
+                    FontSize = 12,
+                    FontStyle = Avalonia.Media.FontStyle.Italic
+                });
+            }
+
+            rows.Children.Add(row);
+        }
+
+        var panel = new StackPanel { Spacing = 8, MinWidth = 320 };
+        panel.Children.Add(new TextBlock
+        {
+            Text = snapshot.Name,
+            FontWeight = Avalonia.Media.FontWeight.SemiBold,
+            TextWrapping = TextWrapping.Wrap
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = string.Format(
+                LR.M_ProofReplay_RosterLoaded,
+                snapshot.Context.Kind == "prize" ? LR.O_ProofReplay_Prizes : LR.O_ProofReplay_Students,
+                snapshot.Members.Count),
+            FontSize = 12
+        });
+        panel.Children.Add(new ScrollViewer
+        {
+            Content = rows,
+            MaxHeight = 320,
+            VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto
+        });
+
+        return panel;
+    }
+
+    private static string KindLabel(VerificationDrawKind kind) =>
+        kind == VerificationDrawKind.Student ? LR.O_ProofReplay_Students : LR.O_ProofReplay_Prizes;
 
     private async void LoadRoster_OnClick(object? sender, RoutedEventArgs e)
     {

@@ -119,6 +119,11 @@ public class Resources
     public static string C_ProofReplay_LoadRoster => Get(nameof(C_ProofReplay_LoadRoster));
     public static string C_ProofReplay_Run => Get(nameof(C_ProofReplay_Run));
     public static string C_ProofReplay_JumpLatest => Get(nameof(C_ProofReplay_JumpLatest));
+    public static string C_ProofReplay_UseCurrentRoster => Get(nameof(C_ProofReplay_UseCurrentRoster));
+    public static string C_ProofReplay_UseThisRoster => Get(nameof(C_ProofReplay_UseThisRoster));
+    public static string C_ProofReplay_Cancel => Get(nameof(C_ProofReplay_Cancel));
+    public static string M_ProofReplay_NoActiveRoster => Get(nameof(M_ProofReplay_NoActiveRoster));
+    public static string M_ProofReplay_RosterDisabled => Get(nameof(M_ProofReplay_RosterDisabled));
     public static string O_ProofReplay_Students => Get(nameof(O_ProofReplay_Students));
     public static string O_ProofReplay_Prizes => Get(nameof(O_ProofReplay_Prizes));
     public static string M_ProofReplay_Empty => Get(nameof(M_ProofReplay_Empty));

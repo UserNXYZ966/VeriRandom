@@ -48,6 +48,18 @@
     <data name="C_ExportList" xml:space="preserve">
         <value>导出奖池</value>
     </data>
+    <data name="C_ExportProofReference" xml:space="preserve">
+        <value>导出证明参考文件</value>
+    </data>
+    <data name="C_ExportProofReference_D" xml:space="preserve">
+        <value>导出一份只含编号、奖品名、数量、权重的 JSON 奖池，供「证明重放」窗口核对这个奖池就是抽取时用的那一个（不含任何附件设置）</value>
+    </data>
+    <data name="M_ProofReferenceSaved" xml:space="preserve">
+        <value>已导出证明参考文件（{0} 条记录）</value>
+    </data>
+    <data name="M_ProofReferenceFailed" xml:space="preserve">
+        <value>导出证明参考文件失败：{0}</value>
+    </data>
     <data name="C_AddPrize" xml:space="preserve">
         <value>添加奖品</value>
     </data>

@@ -38,6 +38,21 @@
   <data name="C_ProofReplay_JumpLatest" xml:space="preserve">
     <value>最新の証明へ移動</value>
   </data>
+  <data name="C_ProofReplay_UseCurrentRoster" xml:space="preserve">
+    <value>現在の名簿を使う</value>
+  </data>
+  <data name="C_ProofReplay_UseThisRoster" xml:space="preserve">
+    <value>この名簿を使う</value>
+  </data>
+  <data name="C_ProofReplay_Cancel" xml:space="preserve">
+    <value>キャンセル</value>
+  </data>
+  <data name="M_ProofReplay_NoActiveRoster" xml:space="preserve">
+    <value>現在有効な{0}がありません</value>
+  </data>
+  <data name="M_ProofReplay_RosterDisabled" xml:space="preserve">
+    <value>無効</value>
+  </data>
   <data name="O_ProofReplay_Students" xml:space="preserve">
     <value>点呼</value>
   </data>

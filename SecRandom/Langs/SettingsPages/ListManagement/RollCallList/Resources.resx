@@ -48,6 +48,18 @@
     <data name="C_ExportList" xml:space="preserve">
         <value>导出名单</value>
     </data>
+    <data name="C_ExportProofReference" xml:space="preserve">
+        <value>导出证明参考文件</value>
+    </data>
+    <data name="C_ExportProofReference_D" xml:space="preserve">
+        <value>导出一份只含编号、姓名、分组、性别的 JSON 名单，供「证明重放」窗口核对这份名单就是抽取时用的那一份（不含任何附件设置）</value>
+    </data>
+    <data name="M_ProofReferenceSaved" xml:space="preserve">
+        <value>已导出证明参考文件（{0} 条记录）</value>
+    </data>
+    <data name="M_ProofReferenceFailed" xml:space="preserve">
+        <value>导出证明参考文件失败：{0}</value>
+    </data>
     <data name="C_AddMember" xml:space="preserve">
         <value>添加成员</value>
     </data>

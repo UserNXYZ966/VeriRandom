@@ -116,6 +116,21 @@
   <data name="C_ProofReplay_JumpLatest" xml:space="preserve">
     <value>跳转到最新证明</value>
   </data>
+  <data name="C_ProofReplay_UseCurrentRoster" xml:space="preserve">
+    <value>使用当前名单</value>
+  </data>
+  <data name="C_ProofReplay_UseThisRoster" xml:space="preserve">
+    <value>使用这份名单</value>
+  </data>
+  <data name="C_ProofReplay_Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="M_ProofReplay_NoActiveRoster" xml:space="preserve">
+    <value>当前没有活动的{0}</value>
+  </data>
+  <data name="M_ProofReplay_RosterDisabled" xml:space="preserve">
+    <value>已停用</value>
+  </data>
   <data name="O_ProofReplay_Students" xml:space="preserve">
     <value>点名</value>
   </data>

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using SecRandom.Core.Abstraction;
+using SecRandom.Core.Abstraction.Services;
 using SecRandom.Core.Models.Verification;
 using SecRandom.Core.Services.Verification;
 using SecRandom.Shared.Models.Profile;
@@ -40,6 +41,23 @@ public sealed record ProofRosterContext(
     IReadOnlyDictionary<Guid, string> Names,
     string Digest);
 
+/// <summary>
+///     One member as the preview shows it. <see cref="Trailing" /> carries the values the digest also commits but
+///     which are not the member's identity (a student's group and gender, a prize's count), so the preview shows what
+///     the user is actually about to vouch for instead of just a name.
+/// </summary>
+public sealed record ProofRosterMember(
+    string Number,
+    string Name,
+    string Trailing,
+    bool Enabled);
+
+/// <summary>A roster plus its members: the context used for replay/assessment, and the rows previewed first.</summary>
+public sealed record ProofRosterSnapshot(
+    ProofRosterContext Context,
+    string Name,
+    IReadOnlyList<ProofRosterMember> Members);
+
 /// <summary>Result of replaying one node, including the roster check when a roster was supplied.</summary>
 public sealed record ProofReplayOutcome(
     ProofReplayReport Report,
@@ -56,6 +74,7 @@ public sealed class ProofReplayFileService(
     DrawProofExportService proofExporter,
     OwnProofExportService ownProofExporter,
     ProofIntegrityVerifier integrityVerifier,
+    IProfileService profileService,
     ILogger<ProofReplayFileService> logger)
 {
     /// <summary>
@@ -112,6 +131,50 @@ public sealed class ProofReplayFileService(
             logger.LogWarning(exception, "证明重放：读取名单文件 {Path} 失败", path);
             return null;
         }
+    }
+
+    /// <summary>
+    ///     The roster that is active right now, taken for the draw kind of the selected proof.
+    /// </summary>
+    /// <remarks>
+    ///     This reads live state on purpose, and it is the one place that may: the roster digest exists precisely to
+    ///     answer "is the list I have now the one this draw was taken from", so comparing against the live list is the
+    ///     check itself. The replay itself still never touches live state — its candidate pool, weights and seed come
+    ///     from the proof.
+    /// </remarks>
+    public bool TryLoadActiveRoster(VerificationDrawKind kind, out ProofRosterSnapshot? snapshot)
+    {
+        snapshot = null;
+
+        if (kind == VerificationDrawKind.Prize)
+        {
+            if (profileService.CurrentPrizeList is not { } prizes)
+                return false;
+
+            snapshot = new ProofRosterSnapshot(
+                new ProofRosterContext("prize", Names(prizes), RosterDigest.Compute(prizes)),
+                prizes.Name,
+                prizes.Prizes.Select(prize => new ProofRosterMember(
+                    prize.Id,
+                    DisplayName(prize),
+                    $"×{prize.Count}",
+                    prize.Exists)).ToArray());
+            return true;
+        }
+
+        if (profileService.CurrentStudentList is not { } students)
+            return false;
+
+        snapshot = new ProofRosterSnapshot(
+            new ProofRosterContext("student", Names(students), RosterDigest.Compute(students)),
+            students.Name,
+            students.Students.Select(student => new ProofRosterMember(
+                student.Id,
+                DisplayName(student),
+                string.Join(" · ", new[] { student.Group, student.Gender }
+                    .Where(part => !string.IsNullOrWhiteSpace(part))),
+                student.Exists)).ToArray());
+        return true;
     }
 
     /// <summary>Replays one node and, when a roster was supplied, resolves both winner sets to names.</summary>
@@ -281,12 +344,20 @@ public sealed class ProofReplayFileService(
     private static Dictionary<Guid, string> Names(StudentList list) =>
         list.Students
             .GroupBy(student => student.RecordId)
-            .ToDictionary(group => group.Key, group => group.First().Name);
+            .ToDictionary(group => group.Key, group => DisplayName(group.First()));
 
     private static Dictionary<Guid, string> Names(PrizeList list) =>
         list.Prizes
             .GroupBy(prize => prize.RecordId)
-            .ToDictionary(group => group.Key, group => group.First().Name);
+            .ToDictionary(group => group.Key, group => DisplayName(group.First()));
+
+    // A record is a valid candidate with only one of number or name, so the name map falls back to the number
+    // rather than resolving to an empty label.
+    private static string DisplayName(Student student) =>
+        string.IsNullOrWhiteSpace(student.Name) ? student.Id : student.Name;
+
+    private static string DisplayName(Prize prize) =>
+        string.IsNullOrWhiteSpace(prize.Name) ? prize.Id : prize.Name;
 
     /// <summary>base64url without padding, as the proof writer produced it.</summary>
     private static byte[]? TryFromBase64Url(string text)

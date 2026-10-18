@@ -879,3 +879,23 @@
 
 ---
 
+## 31. 参考名单：`使用当前名单` + 名单页 `导出证明参考文件`（为什么 CSV/XLSX 不行）
+
+**两个入口**：
+
+1. **重放窗口 · 使用当前名单**（`C_ProofReplay_UseCurrentRoster`）：按**选中节点**的抽取类型取当前活动的点名名单 / 奖池（`IProfileService.CurrentStudentList` / `CurrentPrizeList`），先用 `FAContentDialog` 弹一个**只读成员预览**（编号、姓名、分组/性别或数量，停用成员标出），确认后才作为参考名单。这是窗口里**唯一**允许读实时状态的地方，而且正是名单摘要存在的意义——"我现在这份名单是不是抽取时那份"；**重放本身仍然只用证明里的候选池、权重与种子**
+2. **名单/奖池页 · 导出证明参考文件**（`C_ExportProofReference`，两个页面各一颗按钮）：`ProofRosterReferenceExporter` 生成纯 JSON，形状就是磁盘上的名单文件（`students` / `prizes` 根属性），只拷贝 `RecordId`、`Id`、`Name`、`Group`、`Gender`、`Exists`（奖品另加 `Count`、`Weight`）与 `Tags`，**不带附件设置**；重放窗口 `LoadRoster` 原样就能读
+
+**为什么现成的导出（CSV/XLSX）不能当参考名单**（这是本轮唯一的"否"，写下来免得反复问）：
+
+- 历史导出**故意不写 `RecordId`**（AGENTS 明令：`RecordId`/`DrawRoundId` 绝不进导出文件），而重放需要的两件事都以它为准：中奖者在证明里记的是裸 `RecordId`，名单摘要算的也是 `RecordId → 显示信息` 的映射。没有 `RecordId`，**姓名对不回中奖者，摘要也算不出来**
+- 把导出的 CSV/XLSX 再导入成一份新名单**也救不了**：导入会给每条记录**新分配** `RecordId`，于是摘要必然不同——界面会说"不一致"，而实际是同一批人，这个坑比不支持更糟
+- 因此参考名单只有两种合法来源：**当前名单**（实时读取）或**本功能导出的 JSON**（携带 `RecordId`）。若将来想让导出文件也能当参考，唯一路径是给历史导出**可选**加一列 `RecordId`（默认关闭），那要先改 AGENTS 里"绝不进导出文件"的约定，属于单独决策
+
+**必须一起保留的约束**：
+
+- `ProofRosterReferenceExporter` 拷贝的字段**必须与 `RosterDigest.Compute` 哈希的字段完全一致**（学生：`Id`/`Name`/`Group`/`Gender`/`Exists`；奖品：`Id`/`Name`/`Count`/`Weight`/`Exists`，加上各自的 `RecordId`）。少拷一个字段，摘要就变了，之后每一次核对都会报"不一致"，而界面上没有任何线索能解释
+- 参考文件与**名单传输导出**（Excel/CSV/二维码）是两件事，两个按钮分开正是为了让"CSV 也能当参考"这种预期不可能出现
+
+---
+

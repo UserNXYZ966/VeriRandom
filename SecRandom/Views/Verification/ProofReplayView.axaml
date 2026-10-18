@@ -65,6 +65,11 @@
                             HorizontalAlignment="Stretch"
                             Content="{x:Static lv:Resources.C_ProofReplay_LoadRoster}"
                             Click="LoadRoster_OnClick" />
+                    <Button x:Name="UseCurrentRosterButton"
+                            HorizontalAlignment="Stretch"
+                            IsEnabled="False"
+                            Content="{x:Static lv:Resources.C_ProofReplay_UseCurrentRoster}"
+                            Click="UseCurrentRoster_OnClick" />
                     <TextBlock x:Name="RosterText" FontSize="12" TextWrapping="Wrap"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                     <Button x:Name="ReplayButton"
