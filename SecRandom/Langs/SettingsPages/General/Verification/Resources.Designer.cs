@@ -118,6 +118,7 @@ public class Resources
     public static string S_ProofReplay => Get(nameof(S_ProofReplay));
     public static string C_ProofReplay_LoadRoster => Get(nameof(C_ProofReplay_LoadRoster));
     public static string C_ProofReplay_Run => Get(nameof(C_ProofReplay_Run));
+    public static string C_ProofReplay_JumpLatest => Get(nameof(C_ProofReplay_JumpLatest));
     public static string O_ProofReplay_Students => Get(nameof(O_ProofReplay_Students));
     public static string O_ProofReplay_Prizes => Get(nameof(O_ProofReplay_Prizes));
     public static string M_ProofReplay_Empty => Get(nameof(M_ProofReplay_Empty));

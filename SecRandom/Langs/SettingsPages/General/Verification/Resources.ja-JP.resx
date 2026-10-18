@@ -35,6 +35,9 @@
   <data name="C_ProofReplay_Run" xml:space="preserve">
     <value>この抽選を再現する</value>
   </data>
+  <data name="C_ProofReplay_JumpLatest" xml:space="preserve">
+    <value>最新の証明へ移動</value>
+  </data>
   <data name="O_ProofReplay_Students" xml:space="preserve">
     <value>点呼</value>
   </data>

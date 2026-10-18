@@ -35,6 +35,9 @@ It prevents replacement of local draw code, random seeds, or result files during
   <data name="C_ProofReplay_Run" xml:space="preserve">
     <value>Replay this draw</value>
   </data>
+  <data name="C_ProofReplay_JumpLatest" xml:space="preserve">
+    <value>Jump to the latest proof</value>
+  </data>
   <data name="O_ProofReplay_Students" xml:space="preserve">
     <value>Roll call</value>
   </data>

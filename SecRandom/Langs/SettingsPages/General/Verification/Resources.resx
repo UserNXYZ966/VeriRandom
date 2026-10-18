@@ -113,6 +113,9 @@
   <data name="C_ProofReplay_Run" xml:space="preserve">
     <value>重放本次抽取</value>
   </data>
+  <data name="C_ProofReplay_JumpLatest" xml:space="preserve">
+    <value>跳转到最新证明</value>
+  </data>
   <data name="O_ProofReplay_Students" xml:space="preserve">
     <value>点名</value>
   </data>

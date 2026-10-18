@@ -862,3 +862,20 @@
 
 ---
 
+## 30. 证据打分并入证明重放窗口（共用自由画布）+「跳转到最新证明」
+
+**变更**：`S_ProofTrust` 那张卡从抽取验证页**整体移入** `main.proofReplay` 窗口的右侧面板，与重放共用同一块自由画布：**选中哪个节点就评哪一份证明**（不再是「永远只看最新一份」）。画布右上角新增「跳转到最新证明」按钮（`C_ProofReplay_JumpLatest`），一键选中链尾并滚到最右端。
+
+**为什么合并**：重放回答「按这份记录本该是谁中」，打分回答「这份记录本身有什么支撑」——两个问题指的是**同一份证明**。分成两处时，用户得先在设置页对最新一份打分，再开另一个窗口按链序号找同一份，纯属自找错位。
+
+**两条实现要点**：
+
+1. **链完整性改成按节点判定**（`ProofReplayFileService.IsChainIntactFor`）：旧的设置页用法是整条链 `Verify().IsHealthy` 一刀切，因为那里只评最新一份；窗口既然允许选任意节点，就必须让**自己文件被改过的那一个**归零，而不是让它搭别人的便车。因此判定是「链级断裂（gap / broken link / beyond head）照旧一票否决」+「`Modified` / `Unreadable` / `UnsupportedVersion` 这三类问题只要点名了本节点就否决」。除此之外仍完全委托 `ProofIntegrityVerifier`，不自建校验
+2. **评估所需的四项证据全部来自磁盘上的同一对文件**：Up 文件给链位、回执与时间戳，参考兄弟件（`OwnProofPaths.FromUpPath`）给信标脉冲；时间戳必须验签通过才算数，回执必须绑定到这份证明。`ProofReplayFileService` 因此新增 `OwnProofExportService` / `ProofIntegrityVerifier` 两个构造依赖（都是宿主单例）
+
+**顺带修正的历史描述**：§16 的「修改文件」一段写的 `VerificationSettingsPage.axaml(.cs)` 新增 `S_ProofTrust` 区块，**位置已被本条取代**——打分触发与 `FormatTrustReport` 等格式化助手现在都在 `Views/Verification/ProofReplayView.axaml(.cs)`；那批键继续复用抽取验证页自己的本地化目录，没有新建目录。设置页那句「按最新一份打分」的描述随卡片一起消失，别再按旧位置找它。
+
+**布局注意**：画布外的 `ScrollViewer` 更名 `ChainScroll`。「跳转到最新证明」的滚动**必须 post 到布局之后**——点击时 `Extent` 还是布局前的旧值，按它算出的偏移会被夹回 0。
+
+---
+

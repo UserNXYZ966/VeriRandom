@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using SecRandom.Core.Services.Verification;
 using SecRandom.Core.Views;
 using SecRandom.Services.Verification;
@@ -16,11 +19,13 @@ namespace SecRandom.Views.Verification;
 
 /// <summary>
 ///     The proof replay window: a read-only canvas that lays the retained proofs out in hash-chain order with their
-///     draw time, and a panel that replays whichever node the user selects.
+///     draw time, and a panel that replays and grades whichever node the user selects.
 /// </summary>
 /// <remarks>
 ///     The canvas is display and selection only — nothing on it is editable or draggable, because its whole point is
-///     to show what the chain actually recorded rather than a picture the user could reshape.
+///     to show what the chain actually recorded rather than a picture the user could reshape. Replay and the evidence
+///     score live in the same panel on purpose: both answer questions about the same node, and the score is what says
+///     whether the record being replayed is itself backed by anything.
 /// </remarks>
 public sealed partial class ProofReplayView : ViewBase
 {
@@ -75,8 +80,8 @@ public sealed partial class ProofReplayView : ViewBase
             {
                 var link = new Line
                 {
-                    StartPoint = new Avalonia.Point(left - NodeSpacing + NodeWidth, NodeTop + NodeHeight / 2),
-                    EndPoint = new Avalonia.Point(left, NodeTop + NodeHeight / 2)
+                    StartPoint = new Point(left - NodeSpacing + NodeWidth, NodeTop + NodeHeight / 2),
+                    EndPoint = new Point(left, NodeTop + NodeHeight / 2)
                 };
                 link.Classes.Add("chainLink");
                 ChainCanvas.Children.Add(link);
@@ -134,6 +139,29 @@ public sealed partial class ProofReplayView : ViewBase
         ReplayButton.IsEnabled = node.CanReplay;
         ReplayStatusText.Text = string.Empty;
         ReplayDetailText.Text = string.Empty;
+        AssessTrustButton.IsEnabled = true;
+        TrustResultText.Text = string.Empty;
+    }
+
+    /// <summary>
+    ///     Scrolls to and selects the newest proof, which is also the chain tail and therefore the rightmost node.
+    ///     Proofs are laid out oldest-first, so with a long chain the node the user almost always wants is the one
+    ///     that starts off-screen.
+    /// </summary>
+    private void JumpLatest_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_nodes.Count == 0)
+            return;
+
+        Select(_nodes[^1]);
+
+        // Extent is still the pre-layout value while the click is being handled, and an offset clamped against it
+        // snaps back to 0, so the scroll is posted after this layout pass instead of applied here.
+        Dispatcher.UIThread.Post(
+            () => ChainScroll.Offset = new Vector(
+                Math.Max(0, ChainScroll.Extent.Width - ChainScroll.Viewport.Width),
+                ChainScroll.Offset.Y),
+            DispatcherPriority.Background);
     }
 
     private async void LoadRoster_OnClick(object? sender, RoutedEventArgs e)
@@ -201,6 +229,93 @@ public sealed partial class ProofReplayView : ViewBase
         }
 
         ReplayDetailText.Text = string.Join("\n", lines);
+    }
+
+    /// <summary>
+    ///     Grades the selected node against the sources the user trusts. It grades the selection rather than "the
+    ///     newest proof" because the same window is where the user chose the node to look at.
+    /// </summary>
+    private void AssessTrust_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_selected is not { } node)
+            return;
+
+        var trusted = new List<ProofTrustSource>();
+        if (TrustBeacon.IsChecked == true)
+            trusted.Add(ProofTrustSource.BeaconProvider);
+        if (TrustTimestamp.IsChecked == true)
+            trusted.Add(ProofTrustSource.TimestampAuthority);
+        if (TrustServer.IsChecked == true)
+            trusted.Add(ProofTrustSource.SectlServer);
+        if (TrustWitness.IsChecked == true)
+            trusted.Add(ProofTrustSource.SocialWitness);
+
+        if (trusted.Count == 0)
+        {
+            TrustResultText.Text = LR.M_ProofTrust_SelectSource;
+            return;
+        }
+
+        var report = _replayService.AssessTrust(node, trusted, ReadWitnessTime(), SelectedWitnessConfidence());
+        TrustResultText.Text = FormatTrustReport(report);
+    }
+
+    /// <summary>A remembered draw time only counts when both halves were supplied; otherwise the factor is absent.</summary>
+    private DateTimeOffset? ReadWitnessTime()
+    {
+        if (WitnessDate.SelectedDate is not { } date || WitnessTime.SelectedTime is not { } time)
+            return null;
+
+        var local = date.Date + time;
+        return new DateTimeOffset(local, TimeZoneInfo.Local.GetUtcOffset(local));
+    }
+
+    private WitnessTimeConfidence SelectedWitnessConfidence() => WitnessConfidence.SelectedIndex switch
+    {
+        1 => WitnessTimeConfidence.Medium,
+        2 => WitnessTimeConfidence.Low,
+        _ => WitnessTimeConfidence.High
+    };
+
+    private static string TrustSourceLabel(ProofTrustSource source) => source switch
+    {
+        ProofTrustSource.BeaconProvider => LR.C_ProofTrust_Beacon,
+        ProofTrustSource.TimestampAuthority => LR.C_ProofTrust_Timestamp,
+        ProofTrustSource.SectlServer => LR.C_ProofTrust_Server,
+        _ => LR.C_ProofTrust_Witness
+    };
+
+    private static string FormatTrustReport(ProofTrustReport report)
+    {
+        List<string> lines =
+        [
+            string.Format(CultureInfo.CurrentCulture, LR.M_ProofTrust_Score, report.Score)
+        ];
+
+        if (report.IsZeroed)
+            lines.Add(LR.M_ProofTrust_Zeroed);
+        if (report.PulsePenalized)
+        {
+            lines.Add(report.PulseTier == ProofTrustPulseTier.BeyondTolerance
+                ? LR.M_ProofTrust_PulseExpired
+                : LR.M_ProofTrust_PreviousPeriod);
+        }
+
+        foreach (var factor in report.Factors)
+        {
+            var name = TrustSourceLabel(factor.Source);
+            lines.Add(factor.State switch
+            {
+                ProofTrustFactorState.Satisfied =>
+                    string.Format(CultureInfo.CurrentCulture, LR.M_ProofTrust_Factor_Ok, name),
+                ProofTrustFactorState.PartiallySatisfied =>
+                    string.Format(CultureInfo.CurrentCulture, LR.M_ProofTrust_Factor_Partial,
+                        name, factor.ErrorSeconds ?? 0d, factor.ToleranceSeconds ?? 0d),
+                _ => string.Format(CultureInfo.CurrentCulture, LR.M_ProofTrust_Factor_Missing, name)
+            });
+        }
+
+        return string.Join(Environment.NewLine, lines);
     }
 
     // 选中态用类名切换，而不是在代码里塞颜色：样式表里定义观感，代码只负责"谁被选中"。

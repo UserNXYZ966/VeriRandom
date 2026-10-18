@@ -54,6 +54,8 @@ public sealed record ProofReplayOutcome(
 /// </summary>
 public sealed class ProofReplayFileService(
     DrawProofExportService proofExporter,
+    OwnProofExportService ownProofExporter,
+    ProofIntegrityVerifier integrityVerifier,
     ILogger<ProofReplayFileService> logger)
 {
     /// <summary>
@@ -132,6 +134,69 @@ public sealed class ProofReplayFileService(
             rosterMatches,
             ResolveNames(report.RecordedWinners, roster),
             ResolveNames(report.ReplayedWinners, roster));
+    }
+
+    /// <summary>
+    ///     Grades one node against the sources the user chose to trust, reading only artifacts on disk: the Up file
+    ///     supplies the chain position, the receipt and the time stamp, and the reference sibling supplies the beacon
+    ///     pulse. Each input is verified rather than merely present — the time stamp must validate and the receipt
+    ///     must be bound to this proof — so a node that carries a broken token cannot claim that factor.
+    /// </summary>
+    /// <remarks>
+    ///     Chain intactness is scoped to this node, unlike the settings page it replaces: the window lets the user pick
+    ///     any node, so the node whose own file is the corrupted one must be zeroed even while the rest of the chain
+    ///     still verifies. Chain-level breaks (a gap, a broken link, a proof beyond the head) still zero everything,
+    ///     because in those cases the chain as a whole can no longer explain itself.
+    /// </remarks>
+    public ProofTrustReport AssessTrust(
+        ProofReplayNode node,
+        IReadOnlyCollection<ProofTrustSource> trustedSources,
+        DateTimeOffset? witnessedAtUtc,
+        WitnessTimeConfidence witnessConfidence)
+    {
+        if (!proofExporter.TryRead(node.Path, out var proof) || proof is null)
+            return ProofTrustScorer.Evaluate(new ProofTrustInput(
+                false, false, false, false, null, null, node.CreatedAtUtc,
+                trustedSources, witnessedAtUtc, witnessConfidence));
+
+        DrawProofBeacon? beacon = null;
+        if (ownProofExporter.TryRead(OwnProofPaths.FromUpPath(node.Path), out var own) && own is not null)
+            beacon = own.Beacon;
+
+        DateTimeOffset? timestampedAt = null;
+        var timestampValid = false;
+        if (proof.Witness?.TimestampToken is { Length: > 0 } token)
+        {
+            var validation = TimestampAuthorityClient.Validate(
+                token, WitnessClient.FromBase64Url(WitnessClient.ComputeAttestedProofHash(proof)));
+            timestampValid = validation.IsValid;
+            if (validation.IsValid)
+                timestampedAt = validation.Timestamp;
+        }
+
+        return ProofTrustScorer.Evaluate(new ProofTrustInput(
+            IsChainIntactFor(node.Path),
+            beacon is not null,
+            timestampValid,
+            WitnessClient.TryValidateStoredReceipt(proof, out _),
+            beacon?.PulseTimeStamp,
+            timestampedAt,
+            proof.CreatedAtUtc,
+            trustedSources,
+            witnessedAtUtc,
+            witnessConfidence));
+    }
+
+    private bool IsChainIntactFor(string path)
+    {
+        var report = integrityVerifier.Verify();
+        if (report.Gaps > 0 || report.BrokenLinks > 0 || report.BeyondHead > 0)
+            return false;
+
+        return report.Issues.All(issue =>
+            issue.Kind is not (ProofIntegrityIssueKind.Modified or ProofIntegrityIssueKind.Unreadable
+                or ProofIntegrityIssueKind.UnsupportedVersion)
+            || !string.Equals(issue.Path, path, StringComparison.OrdinalIgnoreCase));
     }
 
     private static IReadOnlyList<string> ResolveNames(
