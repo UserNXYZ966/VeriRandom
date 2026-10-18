@@ -39,8 +39,16 @@ public sealed class BeaconEntropyProvider(
     private bool _stateLoaded;
     private BeaconSequenceState? _state;
 
+    /// <summary>
+    ///     How long a prefetched pulse may sit unused, i.e. exactly one period. This is what makes the periodic
+    ///     prefetch safe: a pulse fetched by a tick that no draw consumed is dropped rather than reused by a much
+    ///     later draw, which would cross a period boundary and halve the trust score — the prefetch exists to save
+    ///     a cost, never to trade one for another.
+    /// </summary>
+    private static readonly TimeSpan PrefetchedPulseMaxAge = TimeSpan.FromSeconds(60);
+
     private readonly object _prefetchGate = new();
-    private (Uri Endpoint, Task<BeaconPulse> Pulse)? _prefetched;
+    private (Uri Endpoint, Task<BeaconPulse> Pulse, DateTimeOffset FetchedAt)? _prefetched;
 
     /// <summary>
     ///     Starts fetching the latest pulse without reserving anything, so a caller that knows a draw is about
@@ -65,20 +73,26 @@ public sealed class BeaconEntropyProvider(
             // prefetch and the draw, and a pulse from the old endpoint must never be recorded as if it came
             // from the new one.
             var endpoint = BeaconEndpointPolicy.Normalize(configHandler.Data.General.Verification.BeaconEndpoint);
-            _prefetched = (endpoint, beaconClient.GetLatestPulseAsync(endpoint, CancellationToken.None));
+            _prefetched = (endpoint, beaconClient.GetLatestPulseAsync(endpoint, CancellationToken.None),
+                DateTimeOffset.UtcNow);
         }
     }
 
     private async Task<BeaconPulse> TakePrefetchedPulseAsync(Uri endpoint, CancellationToken cancellationToken)
     {
-        (Uri Endpoint, Task<BeaconPulse> Pulse)? pending;
+        (Uri Endpoint, Task<BeaconPulse> Pulse, DateTimeOffset FetchedAt)? pending;
         lock (_prefetchGate)
         {
             pending = _prefetched;
             _prefetched = null;
         }
 
-        if (pending is { } candidate && candidate.Endpoint == endpoint)
+        // The cached pulse is only worth keeping while it still belongs to the current period, which is what lets
+        // a once-a-minute prefetch serve a draw inside the same minute without ever feeding a later draw a pulse
+        // from an older period.
+        if (pending is { } candidate
+            && candidate.Endpoint == endpoint
+            && DateTimeOffset.UtcNow - candidate.FetchedAt <= PrefetchedPulseMaxAge)
         {
             try
             {

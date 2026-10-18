@@ -47,6 +47,15 @@
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
 
+            <fa:FASettingsExpander x:Name="S_BeaconAutoPrefetch"
+                                    Header="{x:Static lv:Resources.S_BeaconAutoPrefetch}"
+                                    Description="{x:Static lv:Resources.S_BeaconAutoPrefetch_D}"
+                                    IconSource="{sr:FluentIconSource {sr:Fi PulseFilled}}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding BeaconAutoPrefetchEnabled, Mode=TwoWay}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
             <fa:FASettingsExpander x:Name="S_TimestampAuthority"
                                     Header="{x:Static lv:Resources.S_TimestampAuthority}"
                                     Description="{x:Static lv:Resources.S_TimestampAuthority_D}"

@@ -393,6 +393,19 @@ public partial class VerificationSettingsPage : UserControl
         }
     }
 
+    public bool BeaconAutoPrefetchEnabled
+    {
+        get => ConfigHandler.Data.General.Verification.BeaconAutoPrefetchEnabled;
+        set
+        {
+            if (ConfigHandler.Data.General.Verification.BeaconAutoPrefetchEnabled == value)
+                return;
+
+            ConfigHandler.Data.General.Verification.BeaconAutoPrefetchEnabled = value;
+            ConfigHandler.Save();
+        }
+    }
+
     public string BeaconEndpoint
     {
         get => ConfigHandler.Data.General.Verification.BeaconEndpoint;

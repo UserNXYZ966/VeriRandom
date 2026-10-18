@@ -18,6 +18,12 @@ public partial class VerificationSettingsConfig : ObservableObject
     // that ages past its period before the draw costs the usual half of the trust score, nothing more.
     [ObservableProperty] private bool _beaconPrefetchEnabled;
 
+    // Off by default, and only meaningful together with the switch above. When on, the host fetches the latest
+    // pulse once a minute in the background, so a draw that starts inside that minute consumes the cached pulse
+    // with no network wait at all. The provider discards a cached pulse once it is older than one period, so a
+    // minute that ends without a draw can never hand a much later draw a stale pulse.
+    [ObservableProperty] private bool _beaconAutoPrefetchEnabled;
+
     // Advanced override. The default is the official NIST Beacon v2 base endpoint; a mirror is allowed
     // because the reference proof records the raw pulse and its signature, so a substituted pulse stays detectable.
     [ObservableProperty] private string _beaconEndpoint = "https://beacon.nist.gov/beacon/2.0/";

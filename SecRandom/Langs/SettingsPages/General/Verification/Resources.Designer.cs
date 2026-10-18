@@ -113,6 +113,7 @@ public class Resources
     public static string M_ProofIssue_MissingTail => Get(nameof(M_ProofIssue_MissingTail));
     public static string S_BeaconEntropy => Get(nameof(S_BeaconEntropy));
     public static string S_BeaconPrefetch => Get(nameof(S_BeaconPrefetch));
+    public static string S_BeaconAutoPrefetch => Get(nameof(S_BeaconAutoPrefetch));
     public static string C_OpenProofReplay => Get(nameof(C_OpenProofReplay));
     public static string S_ProofReplay => Get(nameof(S_ProofReplay));
     public static string C_ProofReplay_LoadRoster => Get(nameof(C_ProofReplay_LoadRoster));
@@ -136,6 +137,7 @@ public class Resources
     public static string M_ProofReplay_ReplayedNames => Get(nameof(M_ProofReplay_ReplayedNames));
     public static string M_ProofReplay_RecordedIds => Get(nameof(M_ProofReplay_RecordedIds));
     public static string S_BeaconPrefetch_D => Get(nameof(S_BeaconPrefetch_D));
+    public static string S_BeaconAutoPrefetch_D => Get(nameof(S_BeaconAutoPrefetch_D));
     public static string S_BeaconEntropy_D => Get(nameof(S_BeaconEntropy_D));
     public static string S_BeaconEndpoint => Get(nameof(S_BeaconEndpoint));
     public static string S_BeaconEndpoint_D => Get(nameof(S_BeaconEndpoint_D));

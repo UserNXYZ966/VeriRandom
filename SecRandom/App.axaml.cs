@@ -1217,6 +1217,9 @@ public partial class App : Application
                 services.AddSingleton<DrawProofAttestationService>();
                 services.AddHostedService(serviceProvider =>
                     serviceProvider.GetRequiredService<DrawProofAttestationService>());
+                // 后台每分钟自动预取：定时预取只取脉冲、不占序号，所以就算一整天没人抽签也不会消耗序号、
+                // 也不会在证明链上留下缺口；脉冲超过一个周期会在取用时被丢弃（见 BeaconEntropyProvider）。
+                services.AddHostedService<BeaconPrefetchScheduler>();
                 services.AddTransient<VerificationDrawCoordinator>();
                 services.AddSingleton<SettingsSearchService>();
                 services.AddSingleton<FirstRunOobeService>();

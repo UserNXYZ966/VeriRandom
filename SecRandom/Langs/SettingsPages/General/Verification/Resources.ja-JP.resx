@@ -17,6 +17,12 @@
   <data name="S_BeaconPrefetch_D" xml:space="preserve">
     <value>抽選の開始時にビーコンのパルス取得を先に始め、通信の待ち時間を抽選アニメーションの裏に隠します（先読みするのはパルスだけで、連番は抽選時に確保するため、使われなかった先読みは消費されません）</value>
   </data>
+  <data name="S_BeaconAutoPrefetch" xml:space="preserve">
+    <value>1 分ごとにビーコンのパルスを先読みする</value>
+  </data>
+  <data name="S_BeaconAutoPrefetch_D" xml:space="preserve">
+    <value>有効にするとバックグラウンドで 1 分ごとにパルスを取得し、その 1 分以内に抽選を始めるとキャッシュをそのまま使うため通信の待ち時間はなく（上の先読みとの併用が必要）、キャッシュは 1 周期（60 秒）を超えると破棄されるためずっと後の抽選に使われることはありません</value>
+  </data>
   <data name="C_OpenProofReplay" xml:space="preserve">
     <value>証明の再現</value>
   </data>

@@ -846,3 +846,19 @@
 
 ---
 
+## 29. 信标「每分钟后台自动预取」开关（默认关闭）
+
+**变更**：新增 `VerificationSettingsConfig.BeaconAutoPrefetchEnabled`（默认 `false`，抽取验证页 · 信标组第二行）。它与 §25 的 `BeaconPrefetchEnabled` **同时开启**才生效：后台每分钟取一次最新脉冲放入 `BeaconEntropyProvider` 的单槽缓存，若在这一分钟内开始抽取，`ReserveAsync` 直接消费缓存、没有任何网络等待。
+
+**三处必须一起保留**：
+
+1. **缓存陈旧上限**（`BeaconEntropyProvider.PrefetchedPulseMaxAge = 60 秒`）：缓存条目带取回时刻，超过**一个脉冲周期**即丢弃。没有它，每分钟预取会让几小时前的脉冲一直躺在缓存里等下一次抽取——跨周期只影响评分，但预取的意义是省成本，不该反手把半个评分赔进去
+2. **`ConfigPolicyDigest.ScopeId` 再次升级**（`v3` → `v4`）：新字段落在被策略**整棵投影**的 `General.Verification` 子树里，覆盖字段集变了就必须换 id（与 §25 同一条规则，链是 `v1 → v2 → v3 → v4`）。已签发的旧策略文档会变成 `DocumentMalformed`，重新签发即可；本分支目前没有真实用户持有已签发策略，影响为零
+3. **预取只取脉冲、不占序号**（§25 已确立）：`BeaconPrefetchScheduler` 只调用 `Prefetch()`，序号仍在 `ReserveAsync` 内落盘，所以定时预取即使一整天没人抽签也不消耗序号、不在证明链上留缺口——这是「每分钟跑一次」能够安全存在的前提
+
+**实现落点**：`SecRandom/Services/Verification/BeaconPrefetchScheduler.cs`（`BackgroundService`，`TickInterval = 1 分钟`，整轮 try/catch，失败只记 debug 并在下一分钟重试），在 `App.axaml.cs` 抽取证明那组 hosted service 之后注册（**共享分支**，桌面/平板/手机都有信标设置）。
+
+**与 §25 的关系**：§25 记录的「按动画剩余 5 秒取脉冲」那版调参**从未保留**（用户决定改为周期预取，已回退）；`Prefetch()` 与 `TakePrefetchedPulseAsync` 的端点匹配逻辑仍按 §25。
+
+---
+

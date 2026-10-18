@@ -95,6 +95,12 @@
   <data name="S_BeaconPrefetch_D" xml:space="preserve">
     <value>开始抽签时先异步获取信标脉冲，把网络往返藏在抽签动画里；只预取脉冲本身，序号仍在抽签时预留，因此未被用掉的预取不会消耗序号、也不会在证明链上留下缺口</value>
   </data>
+  <data name="S_BeaconAutoPrefetch" xml:space="preserve">
+    <value>每分钟后台自动预取信标脉冲</value>
+  </data>
+  <data name="S_BeaconAutoPrefetch_D" xml:space="preserve">
+    <value>开启后后台每分钟预取一次脉冲，这一分钟内开始抽签就直接使用缓存、完全没有网络等待；需要同时开启上面的预取开关，缓存超过一个脉冲周期（60 秒）即被丢弃，不会被很久以后的抽签用掉</value>
+  </data>
   <data name="C_OpenProofReplay" xml:space="preserve">
     <value>证明重放</value>
   </data>

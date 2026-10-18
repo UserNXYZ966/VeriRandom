@@ -17,6 +17,12 @@ It prevents replacement of local draw code, random seeds, or result files during
   <data name="S_BeaconPrefetch_D" xml:space="preserve">
     <value>Starts fetching the beacon pulse when a draw begins so the network round trip hides behind the draw animation; only the pulse is prefetched, the per-pulse sequence is still reserved at draw time, so an unused prefetch consumes no sequence and leaves no gap in the proof chain</value>
   </data>
+  <data name="S_BeaconAutoPrefetch" xml:space="preserve">
+    <value>Prefetch the beacon pulse every minute</value>
+  </data>
+  <data name="S_BeaconAutoPrefetch_D" xml:space="preserve">
+    <value>While on, the pulse is fetched once a minute in the background, so a draw started inside that minute uses the cached pulse with no network wait at all; it requires the prefetch switch above, and a cached pulse is discarded once it is older than one period (60 seconds), so a much later draw never uses it</value>
+  </data>
   <data name="C_OpenProofReplay" xml:space="preserve">
     <value>Proof replay</value>
   </data>
