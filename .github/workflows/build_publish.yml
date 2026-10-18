@@ -192,7 +192,7 @@ jobs:
               ConvertTo-Json -Compress | Set-Content -LiteralPath (Join-Path $path 'VeriRandom.package.json') -Encoding utf8NoBOM
           }
           function Publish-Launcher([string]$path, [bool]$selfContained) {
-            $assemblyVersion = $env:VERSION.TrimStart('v', 'V')
+            $assemblyVersion = & ./scripts/Format-ReleaseVersion.ps1 -Tag $env:VERSION
             $arguments = @('publish', 'SecRandom.Launcher/SecRandom.Launcher.csproj', '-c', 'Release', '-r', $env:RID, '-p:UseAppHost=true', '-p:PublishSingleFile=true', '-p:IncludeNativeLibrariesForSelfExtract=true', '-p:DebugType=None', '-p:DebugSymbols=false', "-p:Version=$assemblyVersion", '--no-restore', '-o', $path)
             if ($selfContained) { $arguments += '--self-contained' } else { $arguments += @('--self-contained', 'false') }
             & dotnet @arguments
@@ -604,9 +604,12 @@ jobs:
             $PSNativeCommandUseErrorActionPreference = $false
           }
           if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
-            $version = $env:RELEASE_TAG.TrimStart('v', 'V')
+            # A downstream "v3.1.5 Mu 1" tag is legal, but a NuGet package version cannot carry the space:
+            # Format-ReleaseVersion turns it into "3.1.5-mu.1". The version users see stays the tag itself,
+            # because the app reads it from the generated informational version, not from -p:Version.
+            $version = & ./scripts/Format-ReleaseVersion.ps1 -Tag $env:RELEASE_TAG
             if ($version -notmatch $semverPattern) {
-              throw "Release tag must be a v-prefixed semantic version (vMAJOR.MINOR.PATCH), got '$env:RELEASE_TAG'."
+              throw "Release tag must be a v-prefixed semantic version (vMAJOR.MINOR.PATCH) or a downstream Mu revision, got '$env:RELEASE_TAG'."
             }
           } else {
             $tag = ''
@@ -615,7 +618,7 @@ jobs:
               try { $tag = (git tag --sort=-v:refname 2>$null | Select-Object -First 1) } catch { $tag = '' }
             }
             if (-not [string]::IsNullOrWhiteSpace($tag)) {
-              $version = $tag.TrimStart('v', 'V')
+              $version = & ./scripts/Format-ReleaseVersion.ps1 -Tag $tag
               if ($version -notmatch $semverPattern) {
                 Write-Host "WARNING: latest tag '$tag' is not semantic versioning; using it as-is for the routine build artifact."
               }
@@ -742,7 +745,7 @@ jobs:
           ANDROID_SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}
           ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}
         run: |
-          $version = $env:VERSION.TrimStart('v', 'V')
+          $version = & ./scripts/Format-ReleaseVersion.ps1 -Tag $env:VERSION
           $arguments = @('build', 'SecRandom.Android/SecRandom.Android.csproj', '-c', 'Release', '-r', 'android-${{ matrix.arch }}', "-p:Version=$version", '-p:ApplicationVersion=${{ github.run_number }}', '-p:BuildInParallel=false', '-p:UseSharedCompilation=false')
           $signingValues = @{
             ANDROID_SIGNING_KEYSTORE_BASE64 = $env:ANDROID_SIGNING_KEYSTORE_BASE64
@@ -1016,7 +1019,9 @@ jobs:
           name: VeriRandom ${{ github.event.inputs.release_tag }}
           artifacts: "./artifacts/release/output/*.zip,./artifacts/release/output/*.exe,./artifacts/release/output/*.deb,./artifacts/release/output/*.pkg,./artifacts/release/output/*.apk,./artifacts/release/output/*.ipa,./artifacts/release/output/VeriRandom-update-manifest.json,./artifacts/release/output/VeriRandom-update-manifest.sig"
           draft: true
-          prerelease: ${{ contains(github.event.inputs.release_tag, '-') }}
+          # Only the upstream preview trains are pre-releases. A downstream "v3.1.5 Mu 1" (or the tag-safe
+          # "v3.1.5-Mu.1") is a finished build of this fork, so it publishes as a normal release.
+          prerelease: ${{ contains(github.event.inputs.release_tag, '-alpha') || contains(github.event.inputs.release_tag, '-beta') || contains(github.event.inputs.release_tag, '-rc') }}
           bodyFile: ./release-note.md
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.event.inputs.release_tag }}

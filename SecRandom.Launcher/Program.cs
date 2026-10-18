@@ -65,21 +65,36 @@ static bool IsValidInstallation(string path, string executableName)
     }
 }
 
-static Version ParseVersion(string path)
+// The tuple's second half is the downstream "Mu" ordinal. Ordering by it is what keeps two payloads of the same
+// upstream version distinguishable; the rule mirrors SecRandom.Core/Helpers/ReleaseVersion.cs, which this
+// standalone launcher cannot reference.
+static (Version Core, int Mu) ParseVersion(string path)
 {
     var directoryName = Path.GetFileName(path);
     if (!directoryName.StartsWith("app-v", StringComparison.Ordinal))
-        return new Version();
+        return (new Version(), 0);
 
     var versionText = directoryName[5..];
     var separatorIndex = versionText.LastIndexOf('-');
     if (separatorIndex >= 0 && int.TryParse(versionText[(separatorIndex + 1)..], out _))
         versionText = versionText[..separatorIndex];
 
-    var prereleaseIndex = versionText.IndexOf('-');
-    if (prereleaseIndex >= 0)
-        versionText = versionText[..prereleaseIndex];
-    return Version.TryParse(versionText, out var version) ? version : new Version();
+    var mu = 0;
+    var muMatch = System.Text.RegularExpressions.Regex.Match(
+        versionText, @"(?i)(?:^|[\s\-_+])(?:mu)[\s.\-_]?(?<n>\d+)$");
+    if (muMatch.Success && int.TryParse(muMatch.Groups["n"].Value, out var ordinal))
+    {
+        mu = ordinal;
+        versionText = versionText[..muMatch.Index].TrimEnd(' ', '\t', '-', '_', '+', '.');
+    }
+    else
+    {
+        var prereleaseIndex = versionText.IndexOf('-');
+        if (prereleaseIndex >= 0)
+            versionText = versionText[..prereleaseIndex];
+    }
+
+    return (Version.TryParse(versionText, out var version) ? version : new Version(), mu);
 }
 
 static int ParseBuildNumber(string path)

@@ -362,14 +362,11 @@ public sealed class DataArchiveService(
 
     private static bool IsSupportedV3ProducerVersion(string producerVersion)
     {
-        // producer_version is the raw GlobalConstants.Version, which keeps SemVer pre-release and
-        // build metadata suffixes (for example v3.0.0-alpha.2). System.Version rejects those, so a
-        // pre-release build would otherwise refuse to restore an archive it produced itself.
-        var normalized = producerVersion.Trim().TrimStart('v', 'V');
-        var metadataIndex = normalized.IndexOfAny(['-', '+']);
-        if (metadataIndex >= 0)
-            normalized = normalized[..metadataIndex];
-        return Version.TryParse(normalized, out var version) && version.Major == 3;
+        // producer_version is the raw GlobalConstants.Version, which keeps SemVer pre-release and build
+        // metadata suffixes (for example v3.0.0-alpha.2) and this fork's downstream ordinal
+        // (v3.1.5 Mu 1). System.Version rejects both, so the suffix handling belongs to ReleaseVersion;
+        // without it a downstream build would refuse to restore an archive it produced itself.
+        return ReleaseVersion.TryParse(producerVersion, out var version) && version.Core.Major == 3;
     }
 
     private static InvalidDataException CreateUnsupportedVersionException(ImportInspection inspection)

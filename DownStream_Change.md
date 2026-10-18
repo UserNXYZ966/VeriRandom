@@ -899,3 +899,27 @@
 
 ---
 
+## 32. 下游版本号：`vX.Y.Z Mu N`（不递增上游 SemVer）
+
+**目标**：本分支的版本号跟随上游，但需要在上游版本不变的前提下发布下游自有修订。约定为在上游版本后追加 **Mu 序号**：`v3.1.5 Mu 1`、`v3.1.5 Mu 2` …。排序键是**（数值核心, Mu 序号）**的元组——`Mu 2 > Mu 1`，且任何 Mu 版本都 `> 上游 v3.1.5`、`< 上游 v3.1.6`。
+
+**为什么不用 SemVer 的 `-mu.1`**：SemVer 把 `-x` 视为"该版本的预发布"，不仅在语义上把下游的成品说成"上游版本的预览"，还会让 `3.1.5-mu.1` **排在 `3.1.5` 之下**——于是「上游发布 3.1.5 之后我们补一版」永远无法作为更新推给已经装了 3.1.5 的用户。用一个排序上位于 `3.1.5` 之后的后缀是这条需求的硬要求，这也正是它必须落在自有解析器而不是 `Version.TryParse` 上的原因。
+
+**唯一规则**：`SecRandom.Core/Helpers/ReleaseVersion.cs`（`ReleaseVersion.TryParse` → `ReleaseVersionKey(Version Core, int MuOrdinal)`）。分隔符可以是空格、`-`、`_`、`+`、`.`，`Mu` 不区分大小写，所以 `v3.1.5 Mu 1` / `v3.1.5-Mu.1` / `v3.1.5_Mu_1` / `v3.1.5+Mu1` 等价；尾部的 SemVer 预发布后缀照旧被丢弃（`v3.0.0-beta.1` → 核心 3.0.0、序号 0）。
+
+**所有闸门都改成走这条规则**（缺一处就会让 Mu 版本在那一处退化成"和上游版本相同"或"解析失败"）：
+
+| 位置 | 原来的行为 | 现在 |
+|---|---|---|
+| `SecRandom.Core/Services/Archive/DataArchiveService.IsSupportedV3ProducerVersion` | 只剥 `-`/`+` 后缀，再 `Version.TryParse` | 走 `ReleaseVersion`，Mu 版本能恢复它自己导出的归档（否则**拒绝自己的备份**） |
+| `SecRandom/Services/Updates/UpdateVersionComparer` | 同样只剥后缀再比数值核心 | 走 `ReleaseVersion` 比较（核心, 序号），于是 Mu 2 能推给 Mu 1 |
+| `SecRandom.Launcher/Program.cs` `ParseVersion` | `Version.TryParse`，Mu 名字直接失败 → 两个 payload 并列 | 返回 `(Version, Mu)` 元组并按它排序（该程序集是独立可执行，无法引用 Core，故为**镜像实现**，改规则时两边一起改） |
+| `scripts/validate-release-metadata.ps1` | 只认 `-alpha`/`-beta`，其余带 `-` 一律 `Unsupported prerelease tag` | Mu 标签归 `release` 频道；`tag:` 的取值正则允许空格（`[^\r\n]+?`），否则带空格的标签永远匹配不上 |
+| `.github/workflows/build_publish.yml` | `-p:Version=` 与 `PKG_VERSION` 直接用标签原文 | 先过 `scripts/Format-ReleaseVersion.ps1` 变成 `3.1.5-mu.1`（MSBuild/NuGet 不接受空格）；发布产物的 prerelease 标志改为只认 `-alpha`/`-beta`/`-rc`，Mu 版本按正式版发布 |
+
+**标签可以带空格**：`git tag "v3.1.5 Mu 1"` 之后 GitHub 的 `ref_name`、`git describe`、GitInfo 的 informational version 都会原样带回空格，因此界面显示的就是 `v3.1.5 Mu 1`。文件名的空格由 GitHub 自行 URL 编码，产物名沿用标签原文；只有 `-p:Version` 与 NuGet 包版本必须是无空格的 SemVer 形式。
+
+**发布流程不变**：把 `metadata.yaml` 的 `channels.release.tag` 改成与 Mu 标签**完全相等**（含空格）再打标签，`validate-release-metadata.ps1` 会核对这一点；更新客户端据此解析频道 → 标签。
+
+---
+
