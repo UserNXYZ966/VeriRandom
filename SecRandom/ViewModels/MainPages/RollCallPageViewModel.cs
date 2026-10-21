@@ -200,6 +200,9 @@ public sealed partial class RollCallPageViewModel : ViewModelBase, IDisposable
     public MoreSettingsConfig MoreSettings => Config.MoreSettings;
     public bool IsControlPanelOnLeft => MoreSettings.RollCallControlPanelPosition == RollCallControlPanelPosition.Left;
     public bool IsControlPanelOnRight => !IsControlPanelOnLeft;
+
+    // 结果浮窗是桌面窗口：手机和平板把结果留在主界面里显示，所以只由这个标志决定按钮是否出现。
+    public bool SupportsResultWindow => App.IsDesktop;
     public bool CanDecreaseCount => DrawCount > 1;
     public bool CanIncreaseCount => DrawCount < MaximumDrawCount;
     public bool CanStartDraw => IsDrawing || (!_isDrawCommandRunning && TotalCount > 0);

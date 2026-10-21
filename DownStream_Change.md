@@ -923,3 +923,20 @@
 
 ---
 
+## 33. 点名结果浮窗（把抽取结果缩成置顶小窗）
+
+**功能**：点名页控制面板新增「结果浮窗」按钮，点击后打开一块**无边框、置顶、可拖动**的小窗显示当前抽取结果，同时把主窗口收起——课堂演示课件时也能一直看见谁依次回答问题。
+
+**实现（沿用计时器小窗那条已验证的路子，不是新机制）**：
+
+- `Views/MainPages/ResultMiniWindow.axaml(.cs)`：直接派生 `Window`（`WindowDecorations=None`、`Topmost=True`、`ShowInTaskbar=False`、`CanResize=False`、透明背景 + 半透明圆角卡片）。内容就是主界面那个 `RollCallResultPresenter`，套在 `Viewbox` 里（设计尺寸 620×420，向下缩放），因此**结果、显示设置、动画全部仍由 Host 单例 `RollCallPageViewModel` 提供**，浮窗没有复制任何结果状态
+- `Services/ViewEngine/ResultMiniWindowService.cs`：开窗/复用/还原。**顺序是承重的**：先 `Show()` 浮窗，再 `App.SetMainWindowVisibility("hide")` 收起主窗口——Avalonia 在最后一个窗口关闭时会退出应用，反过来做会在浮窗出现之前把整个应用关掉（与计时器小窗同一条规则）
+- 关闭浮窗（右上角按钮或窗口关闭）一律**还原主窗口**：让用户停在"只剩一张浮窗卡片、看不到任何窗口"的状态比多一次点击更糟
+- **桌面专有**：`RollCallPageViewModel.SupportsResultWindow => App.IsDesktop` 决定按钮是否出现，`ResultMiniWindowService` 只注册在 `BuildHost()` 的桌面分支。手机/平板把结果留在主界面里显示（`MobileDrawPage` 用的就是同一个 presenter）
+
+**拖动**：整块可拖动（`PointerPressed` → `BeginMoveDrag`），但按在按钮上时交给按钮（`IsButtonDescendant`），与计时器小窗一致。
+
+**边界**：它只是"换个容器显示同一份结果"，不是新的绘制通道、不新增设置项、不写任何配置；信标/证明/提交路径完全不受影响。
+
+---
+

@@ -67,6 +67,10 @@
                     <Button Content="{x:Static langs:Resources.C_ShowRemainingList}"
                             IsVisible="{Binding MoreSettings.RollCallRemainingButton}"
                             Click="RemainingListButton_OnClick" />
+                    <!-- 结果浮窗：桌面专有（手机/平板把结果留在主界面里显示），因此只在桌面可见 -->
+                    <Button Content="{x:Static langs:Resources.C_ResultWindow}"
+                            IsVisible="{Binding SupportsResultWindow}"
+                            Click="ResultWindowButton_OnClick" />
                     <Viewbox HorizontalAlignment="Stretch" StretchDirection="DownOnly">
                         <TextBlock Text="{Binding CountSummary}" IsVisible="{Binding MoreSettings.RollCallQuantityLabel}"
                                    HorizontalAlignment="Center" TextAlignment="Center" />

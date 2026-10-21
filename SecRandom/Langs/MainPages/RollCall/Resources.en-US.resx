@@ -45,6 +45,12 @@
   <data name="C_Reset" xml:space="preserve">
      <value>Reset</value>
   </data>
+  <data name="C_ResultWindow" xml:space="preserve">
+    <value>Result window</value>
+  </data>
+  <data name="M_ResultWindowRestore" xml:space="preserve">
+    <value>Restore main window</value>
+  </data>
   <data name="C_ShowRemainingList" xml:space="preserve">
      <value>Show remaining list</value>
   </data>

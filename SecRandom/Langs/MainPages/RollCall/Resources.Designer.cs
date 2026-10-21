@@ -44,6 +44,8 @@ namespace SecRandom.Langs.MainPages.RollCall {
         public static string C_Reset => ResourceManager.GetString("C_Reset", resourceCulture);
         public static string C_RollCallSettings => ResourceManager.GetString("C_RollCallSettings", resourceCulture);
         public static string C_ShowRemainingList => ResourceManager.GetString("C_ShowRemainingList", resourceCulture);
+        public static string C_ResultWindow => ResourceManager.GetString("C_ResultWindow", resourceCulture);
+        public static string M_ResultWindowRestore => ResourceManager.GetString("M_ResultWindowRestore", resourceCulture);
         public static string C_Start => ResourceManager.GetString("C_Start", resourceCulture);
         public static string C_Stop => ResourceManager.GetString("C_Stop", resourceCulture);
         public static string M_CountSummaryFormat => ResourceManager.GetString("M_CountSummaryFormat", resourceCulture);
