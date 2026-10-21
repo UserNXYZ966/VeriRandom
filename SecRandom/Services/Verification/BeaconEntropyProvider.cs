@@ -19,7 +19,7 @@ namespace SecRandom.Services.Verification;
 ///     draw into a visible gap rather than a reused seed.
 /// </summary>
 public sealed class BeaconEntropyProvider(
-    INistBeaconClient beaconClient,
+    ExternalEntropySourceClient sourceClient,
     MainConfigHandler configHandler,
     ILogger<BeaconEntropyProvider> logger)
 {
@@ -48,7 +48,18 @@ public sealed class BeaconEntropyProvider(
     private static readonly TimeSpan PrefetchedPulseMaxAge = TimeSpan.FromSeconds(60);
 
     private readonly object _prefetchGate = new();
-    private (Uri Endpoint, Task<BeaconPulse> Pulse, DateTimeOffset FetchedAt)? _prefetched;
+    private (string SourceId, Uri Endpoint, Task<BeaconPulse> Pulse, DateTimeOffset FetchedAt)? _prefetched;
+
+    /// <summary>The configured source, or the official beacon when the id is missing or unknown this build.</summary>
+    private BeaconSource ResolveSource() =>
+        BeaconSourceCatalog.Find(configHandler.Data.General.Verification.BeaconSourceId)
+        ?? BeaconSourceCatalog.Default;
+
+    // Only the NIST source honours the configurable endpoint; the others are addressed by their catalog entry.
+    private Uri ResolveEndpoint(BeaconSource source) =>
+        source.Kind == BeaconSourceKind.NistBeaconV2
+            ? BeaconEndpointPolicy.Normalize(configHandler.Data.General.Verification.BeaconEndpoint)
+            : new Uri(source.Endpoint);
 
     /// <summary>
     ///     Starts fetching the latest pulse without reserving anything, so a caller that knows a draw is about
@@ -64,6 +75,9 @@ public sealed class BeaconEntropyProvider(
         if (!IsEnabled)
             return;
 
+        var source = ResolveSource();
+        var endpoint = ResolveEndpoint(source);
+
         lock (_prefetchGate)
         {
             if (_prefetched is { Pulse.IsCompleted: false })
@@ -72,15 +86,17 @@ public sealed class BeaconEntropyProvider(
             // The endpoint is remembered with the task: an operator may switch endpoints between the
             // prefetch and the draw, and a pulse from the old endpoint must never be recorded as if it came
             // from the new one.
-            var endpoint = BeaconEndpointPolicy.Normalize(configHandler.Data.General.Verification.BeaconEndpoint);
-            _prefetched = (endpoint, beaconClient.GetLatestPulseAsync(endpoint, CancellationToken.None),
-                DateTimeOffset.UtcNow);
+            _prefetched = (source.Id, endpoint,
+                sourceClient.FetchLatestAsync(source, endpoint, CancellationToken.None), DateTimeOffset.UtcNow);
         }
     }
 
-    private async Task<BeaconPulse> TakePrefetchedPulseAsync(Uri endpoint, CancellationToken cancellationToken)
+    private async Task<BeaconPulse> TakePrefetchedPulseAsync(
+        BeaconSource source,
+        Uri endpoint,
+        CancellationToken cancellationToken)
     {
-        (Uri Endpoint, Task<BeaconPulse> Pulse, DateTimeOffset FetchedAt)? pending;
+        (string SourceId, Uri Endpoint, Task<BeaconPulse> Pulse, DateTimeOffset FetchedAt)? pending;
         lock (_prefetchGate)
         {
             pending = _prefetched;
@@ -91,6 +107,7 @@ public sealed class BeaconEntropyProvider(
         // a once-a-minute prefetch serve a draw inside the same minute without ever feeding a later draw a pulse
         // from an older period.
         if (pending is { } candidate
+            && string.Equals(candidate.SourceId, source.Id, StringComparison.Ordinal)
             && candidate.Endpoint == endpoint
             && DateTimeOffset.UtcNow - candidate.FetchedAt <= PrefetchedPulseMaxAge)
         {
@@ -104,7 +121,7 @@ public sealed class BeaconEntropyProvider(
             }
         }
 
-        return await beaconClient.GetLatestPulseAsync(endpoint, cancellationToken).ConfigureAwait(false);
+        return await sourceClient.FetchLatestAsync(source, endpoint, cancellationToken).ConfigureAwait(false);
     }
 
     public bool IsEnabled => configHandler.Data.General.Verification.BeaconEntropyEnabled;
@@ -114,15 +131,25 @@ public sealed class BeaconEntropyProvider(
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var endpoint = BeaconEndpointPolicy.Normalize(configHandler.Data.General.Verification.BeaconEndpoint);
-            var pulse = await TakePrefetchedPulseAsync(endpoint, cancellationToken).ConfigureAwait(false);
+            var source = ResolveSource();
+            var endpoint = ResolveEndpoint(source);
+            var pulse = await TakePrefetchedPulseAsync(source, endpoint, cancellationToken).ConfigureAwait(false);
 
-            var state = LoadState();
-            var sequence = BeaconSequencePolicy.ResolveNext(state, pulse, out var failure);
-            if (failure != BeaconSequenceFailure.None)
-                throw new BeaconEntropyException(DescribeFailure(failure, pulse, state));
+            // A source without a public timeline (random.org) has no pulse index and no chain position, so the
+            // sequence anchor has nothing to anchor to: uniqueness comes from the fetched bytes themselves and no
+            // state is written, which also means such a source can never report a chain gap.
+            var sequence = 0;
+            if (source.Kind != BeaconSourceKind.RandomOrgEntropy)
+            {
+                var state = LoadState();
+                var resolved = BeaconSequencePolicy.ResolveNext(state, pulse, out var failure);
+                if (failure != BeaconSequenceFailure.None)
+                    throw new BeaconEntropyException(DescribeFailure(failure, pulse, state));
 
-            SaveState(new BeaconSequenceState(pulse.PulseIndex, pulse.ChainIndex, pulse.OutputValue, sequence));
+                SaveState(new BeaconSequenceState(pulse.PulseIndex, pulse.ChainIndex, pulse.OutputValue, resolved));
+                sequence = resolved;
+            }
+
             var seed = BeaconSeedDerivation.Derive(pulse, sequence);
 
             logger.LogInformation(
@@ -131,7 +158,7 @@ public sealed class BeaconEntropyProvider(
 
             return new BeaconSeedReservation(seed, new DrawProofBeacon
             {
-                Provider = BeaconProviderId,
+                Provider = source.ProviderId,
                 Endpoint = endpoint.ToString(),
                 PulseIndex = pulse.PulseIndex,
                 ChainIndex = pulse.ChainIndex,
@@ -141,7 +168,7 @@ public sealed class BeaconEntropyProvider(
                 SignatureValue = pulse.SignatureValue,
                 CertificateId = pulse.CertificateId,
                 CipherSuite = pulse.CipherSuite,
-                BeaconSources = [$"{BeaconProviderId}@{endpoint}"],
+                BeaconSources = [$"{source.ProviderId}@{endpoint}"],
                 Sequence = sequence,
                 Derivation = BeaconSeedDerivation.DerivationId
             });

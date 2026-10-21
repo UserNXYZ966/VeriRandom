@@ -113,6 +113,11 @@ public class Resources
     public static string M_ProofIssue_MissingTail => Get(nameof(M_ProofIssue_MissingTail));
     public static string S_BeaconEntropy => Get(nameof(S_BeaconEntropy));
     public static string S_BeaconPrefetch => Get(nameof(S_BeaconPrefetch));
+    public static string S_BeaconSource => Get(nameof(S_BeaconSource));
+    public static string S_BeaconSource_D => Get(nameof(S_BeaconSource_D));
+    public static string O_BeaconSource_Nist => Get(nameof(O_BeaconSource_Nist));
+    public static string O_BeaconSource_Drand => Get(nameof(O_BeaconSource_Drand));
+    public static string O_BeaconSource_RandomOrg => Get(nameof(O_BeaconSource_RandomOrg));
     public static string S_BeaconAutoPrefetch => Get(nameof(S_BeaconAutoPrefetch));
     public static string C_OpenProofReplay => Get(nameof(C_OpenProofReplay));
     public static string S_ProofReplay => Get(nameof(S_ProofReplay));

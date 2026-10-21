@@ -940,3 +940,32 @@
 
 ---
 
+## 34. 外部熵源可选：NIST / drand / random.org（补完 §3 的"尚未接线"）
+
+**变更**：`VerificationSettingsConfig.BeaconSourceId`（默认 `nist-beacon-v2`，未知 id 回退到 NIST 而不是"没有熵"），抽取验证页 · 信标组新增「随机源」下拉，三项：
+
+| 来源 | 取回时验签 | 事后可复核 | 说明 |
+|---|---|---|---|
+| `nist-beacon-v2` | **是** | 是 | 原有路径，证书 subject 固定 + 签名校验，未改动 |
+| `drand-quicknet` | 否 | **是** | 记录 `round`/`randomness`/`signature`，用目录里内置的链公钥可事后复核 BLS 签名 |
+| `random-org` | 否 | **否** | 只记录取回到的 32 字节；它是大气的真随机，但没有任何签名或时间轴，主持人可以多次取回挑一份 |
+
+**为什么 drand 不在取回时验签**：验 drand 的 BLS12-381 threshold 签名需要配对运算实现，本仓库没有；引入第三方库是一次供应链决策，用户选择"记录但不验签"。因此 drand 走的是与 Own 链相同的**先声明、后核验**路线：本机不拦，但任何人事后拿链公钥都能判定这一轮是不是真的。
+
+**random.org 的特殊处理**：它不是一个 beacon——没有脉冲索引、没有周期、没有链位。所以：
+
+- `BeaconPulse.PulseIndex = 0`、`ChainIndex = 0`、`TimeStamp = 取回时刻`，种子唯一性来自**取回的字节本身**
+- `ReserveAsync` 对它**跳过 `BeaconSequencePolicy` 与 `beacon-state.json` 落盘**：没有公开时间轴就没有"缺口"语义，硬套序号反而会因为"同索引不同输出"被判成冲突而**让每次抽取都失败**
+- 输出固定 32 字节（64 位十六进制），与 `BeaconSeedDerivation.DecodeOutputValue` 要求的 512 位等宽，因此仍然走同一条种子派生
+
+**两处实现细节**：
+
+- 预取缓存改为按 **source id + endpoint** 键控（原来只有 endpoint），换源后旧缓存不会被误用；外部请求统一 8 秒超时（在抽取关键路径上）
+- drand 的**链哈希借 `CertificateId` 字段记录**：证明里没有别的空位承载"是哪条链"，而它与证书 ID 回答的是同一个"谁发布的"问题
+
+**`ConfigPolicyDigest.ScopeId` 第三次升级**（`v4` → `v5`）：新字段又落在被整棵投影的 `General.Verification` 里（§25/§29 同一条规则）。
+
+**已知边界**：这项功能只改变"种子从哪来"，不改变任何可复核性保证的边界——random.org 与本地 CSPRNG 一样无法阻止预先挑种子，差别只在于随机性来自外部物理噪声。
+
+---
+

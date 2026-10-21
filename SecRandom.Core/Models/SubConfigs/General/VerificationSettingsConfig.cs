@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using SecRandom.Core.Enums.Configs;
+using SecRandom.Core.Services.Verification;
 
 namespace SecRandom.Core.Models.SubConfigs.General;
 
@@ -17,6 +18,11 @@ public partial class VerificationSettingsConfig : ObservableObject
     // prefetch whose draw never happens consumes no sequence and leaves no gap in the proof chain. A pulse
     // that ages past its period before the draw costs the usual half of the trust score, nothing more.
     [ObservableProperty] private bool _beaconPrefetchEnabled;
+
+    // Which external entropy source supplies the ordinary-mode seed. An unknown id falls back to the official
+    // NIST beacon rather than to "no entropy", so a hand-edited settings file can never quietly turn the
+    // external source off.
+    [ObservableProperty] private string _beaconSourceId = BeaconSourceCatalog.Default.Id;
 
     // Off by default, and only meaningful together with the switch above. When on, the host fetches the latest
     // pulse once a minute in the background, so a draw that starts inside that minute consumes the cached pulse

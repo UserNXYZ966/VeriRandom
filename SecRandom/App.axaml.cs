@@ -1215,8 +1215,8 @@ public partial class App : Application
                     client.Timeout = TimeSpan.FromSeconds(10));
                 services.AddHttpClient<INistBeaconClient, NistBeaconClient>(client =>
                     client.Timeout = TimeSpan.FromSeconds(5));
-                services.AddSingleton<BeaconEntropyProvider>();
-                services.AddSingleton<DrawProofAttestationService>();
+                services.AddSingleton<ExternalEntropySourceClient>();
+                services.AddSingleton<BeaconEntropyProvider>();                services.AddSingleton<DrawProofAttestationService>();
                 services.AddHostedService(serviceProvider =>
                     serviceProvider.GetRequiredService<DrawProofAttestationService>());
                 // 后台每分钟自动预取：定时预取只取脉冲、不占序号，所以就算一整天没人抽签也不会消耗序号、

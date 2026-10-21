@@ -273,6 +273,43 @@ public partial class VerificationSettingsPage : UserControl
         }
     }
 
+    /// <summary>Index of the configured source in <see cref="BeaconSourceCatalog" />; unknown ids read as NIST.</summary>
+    public int SelectedBeaconSourceIndex
+    {
+        get
+        {
+            var source = ResolvedBeaconSource();
+            for (var index = 0; index < BeaconSourceCatalog.All.Count; index++)
+            {
+                if (string.Equals(BeaconSourceCatalog.All[index].Id, source.Id, StringComparison.Ordinal))
+                    return index;
+            }
+
+            return 0;
+        }
+    }
+
+    private BeaconSource ResolvedBeaconSource() =>
+        BeaconSourceCatalog.Find(ConfigHandler.Data.General.Verification.BeaconSourceId)
+        ?? BeaconSourceCatalog.Default;
+
+    private void BeaconSource_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        var index = BeaconSourceCombo.SelectedIndex;
+        if (index < 0 || index >= BeaconSourceCatalog.All.Count)
+            return;
+
+        var source = BeaconSourceCatalog.All[index];
+        if (string.Equals(ConfigHandler.Data.General.Verification.BeaconSourceId, source.Id, StringComparison.Ordinal))
+            return;
+
+        // Switching the source invalidates a cached pulse from the previous one only because the provider keys its
+        // cache by source id as well; nothing else has to be reset here.
+        ConfigHandler.Data.General.Verification.BeaconSourceId = source.Id;
+        ConfigHandler.Save();
+        OnPropertyChanged(nameof(SelectedBeaconSourceIndex));
+    }
+
     public string BeaconEndpoint
     {
         get => ConfigHandler.Data.General.Verification.BeaconEndpoint;

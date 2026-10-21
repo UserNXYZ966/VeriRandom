@@ -23,9 +23,9 @@ public static class ConfigPolicyDigest
     /// <summary>
     ///     Identifies the covered field set. Adding or removing a covered setting must change this id.
     ///     v3 added the beacon-prefetch switch to the verification subtree, which the policy projects wholesale;
-    ///     v4 added the periodic beacon-prefetch switch to the same subtree, for the same reason.
+    ///     v4 added the periodic beacon-prefetch switch, and v5 the entropy-source id, to the same subtree.
     /// </summary>
-    public const string ScopeId = "verirandom-config-policy/v4";
+    public const string ScopeId = "verirandom-config-policy/v5";
 
     /// <summary>
     ///     Security fields that describe the integrity check itself. Covering them would make switching the

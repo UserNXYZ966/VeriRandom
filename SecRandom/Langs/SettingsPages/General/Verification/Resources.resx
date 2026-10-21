@@ -89,6 +89,21 @@
   <data name="M_BeaconFetching" xml:space="preserve"><value>正在拉取…</value></data>
   <data name="M_BeaconFetched" xml:space="preserve"><value>脉冲 {0}，链 {1}，时间 {2}</value></data>
   <data name="M_BeaconFailed" xml:space="preserve"><value>拉取失败，请检查网络或地址</value></data>
+  <data name="S_BeaconSource" xml:space="preserve">
+    <value>随机源</value>
+  </data>
+  <data name="S_BeaconSource_D" xml:space="preserve">
+    <value>选择抽取种子的外部来源；只有 NIST 信标会在取回时校验签名，drand 轮次的签名会被记录但本版本不校验（可事后用内置链公钥复核），random.org 没有签名也无法事后复核——它只保证种子来自大气噪声，不能阻止主持人多次取回后挑选一份</value>
+  </data>
+  <data name="O_BeaconSource_Nist" xml:space="preserve">
+    <value>NIST 信标（取回时验签）</value>
+  </data>
+  <data name="O_BeaconSource_Drand" xml:space="preserve">
+    <value>drand quicknet（记录签名，可事后复核）</value>
+  </data>
+  <data name="O_BeaconSource_RandomOrg" xml:space="preserve">
+    <value>random.org（真随机，无法复核）</value>
+  </data>
   <data name="S_BeaconPrefetch" xml:space="preserve">
     <value>抽签前预取信标脉冲</value>
   </data>

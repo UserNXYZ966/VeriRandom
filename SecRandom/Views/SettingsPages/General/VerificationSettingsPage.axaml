@@ -65,6 +65,22 @@
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
 
+            <fa:FASettingsExpander x:Name="S_BeaconSource"
+                                    Header="{x:Static lv:Resources.S_BeaconSource}"
+                                    Description="{x:Static lv:Resources.S_BeaconSource_D}"
+                                    IconSource="{sr:FluentIconSource {sr:Fi GlobeFilled}}">
+                <fa:FASettingsExpander.Footer>
+                    <ComboBox x:Name="BeaconSourceCombo"
+                              MinWidth="240"
+                              SelectedIndex="{Binding SelectedBeaconSourceIndex, Mode=OneWay}"
+                              SelectionChanged="BeaconSource_OnSelectionChanged">
+                        <ComboBoxItem Content="{x:Static lv:Resources.O_BeaconSource_Nist}" />
+                        <ComboBoxItem Content="{x:Static lv:Resources.O_BeaconSource_Drand}" />
+                        <ComboBoxItem Content="{x:Static lv:Resources.O_BeaconSource_RandomOrg}" />
+                    </ComboBox>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
             <fa:FASettingsExpander x:Name="S_BeaconEndpoint"
                                     Header="{x:Static lv:Resources.S_BeaconEndpoint}"
                                     Description="{x:Static lv:Resources.S_BeaconEndpoint_D}"

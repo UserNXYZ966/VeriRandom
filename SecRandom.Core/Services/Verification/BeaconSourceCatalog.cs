@@ -16,7 +16,15 @@ public enum BeaconSourceKind
     ///     A drand chain served by the League of Entropy. Its rounds are threshold BLS signatures under one
     ///     long-lived chain public key, so that key can and must be embedded.
     /// </summary>
-    DrandChain
+    DrandChain,
+
+    /// <summary>
+    ///     A true-random HTTP service (random.org) that publishes neither a timeline nor a signature, so a fetched
+    ///     block can never be checked against the authority afterwards. It is offered because it is genuine
+    ///     atmospheric-noise randomness, and because the draw records the exact bytes that seeded it; what it cannot
+    ///     provide is an anchor that would stop the operator from fetching many blocks and keeping the one they like.
+    /// </summary>
+    RandomOrgEntropy
 }
 
 /// <summary>
@@ -96,7 +104,28 @@ public static class BeaconSourceCatalog
         Endpoint: "https://api.drand.sh/",
         ExpectedCertificateSubject: null);
 
-    public static IReadOnlyList<BeaconSource> All { get; } = [NistBeaconV2, DrandQuicknet];
+    /// <summary>
+    ///     random.org's true-random integer service. Deliberately modelled as a source with no timeline: there is no
+    ///     round, no period and no signature to verify, so a pulse from it carries an index of 0 and the fetched bytes
+    ///     themselves are the only identity. Uniqueness of the seed therefore comes from the bytes, not from a
+    ///     per-pulse sequence, and the provider does not persist a sequence anchor for it.
+    /// </summary>
+    public static BeaconSource RandomOrg { get; } = new(
+        Id: "random-org",
+        ProviderId: "random.org",
+        Kind: BeaconSourceKind.RandomOrgEntropy,
+        PeriodSeconds: 0,
+        GenesisTimeUnixSeconds: 0,
+        ChainHash: string.Empty,
+        VerificationKey: string.Empty,
+        Endpoint: "https://www.random.org/",
+        ExpectedCertificateSubject: null);
+
+    public static IReadOnlyList<BeaconSource> All { get; } = [NistBeaconV2, DrandQuicknet, RandomOrg];
+
+    /// <summary>The source used when the configured id is missing or unknown, so a hand-edited settings file cannot
+    /// empty the entropy path.</summary>
+    public static BeaconSource Default => NistBeaconV2;
 
     /// <summary>Resolves a recorded source id; null for an id this build does not know.</summary>
     public static BeaconSource? Find(string? id) =>
