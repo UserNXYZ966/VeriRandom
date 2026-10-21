@@ -218,7 +218,7 @@ public sealed partial class ProofReplayView : ViewBase
             };
 
             row.Children.Add(new TextBlock { Text = member.Number, MinWidth = 72, FontSize = 12 });
-            row.Children.Add(new TextBlock { Text = member.Name, FontSize = 12, TextWrapping = TextWrapping.Wrap });
+            row.Children.Add(new TextBlock { Text = member.Name, FontSize = 12, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
             if (member.Trailing.Length > 0)
                 row.Children.Add(new TextBlock { Text = member.Trailing, FontSize = 12 });
             if (!member.Enabled)
@@ -239,7 +239,7 @@ public sealed partial class ProofReplayView : ViewBase
         {
             Text = snapshot.Name,
             FontWeight = Avalonia.Media.FontWeight.SemiBold,
-            TextWrapping = TextWrapping.Wrap
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap
         });
         panel.Children.Add(new TextBlock
         {

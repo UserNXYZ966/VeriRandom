@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json;
-using SecRandom.Core.Services.Config;
+using SecRandom.Core.Abstraction;
 using SecRandom.Shared.Models.Profile;
 
 namespace SecRandom.Services.Verification;
