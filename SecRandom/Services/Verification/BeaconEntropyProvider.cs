@@ -138,7 +138,7 @@ public sealed class BeaconEntropyProvider(
             // A source without a public timeline (random.org) has no pulse index and no chain position, so the
             // sequence anchor has nothing to anchor to: uniqueness comes from the fetched bytes themselves and no
             // state is written, which also means such a source can never report a chain gap.
-            var sequence = 0;
+            var sequence = 0L;
             if (source.Kind != BeaconSourceKind.RandomOrgEntropy)
             {
                 var state = LoadState();

@@ -304,10 +304,9 @@ public partial class VerificationSettingsPage : UserControl
             return;
 
         // Switching the source invalidates a cached pulse from the previous one only because the provider keys its
-        // cache by source id as well; nothing else has to be reset here.
+        // cache by source id as well; nothing else has to be reset here, and the ComboBox already shows the pick.
         ConfigHandler.Data.General.Verification.BeaconSourceId = source.Id;
         ConfigHandler.Save();
-        OnPropertyChanged(nameof(SelectedBeaconSourceIndex));
     }
 
     public string BeaconEndpoint
