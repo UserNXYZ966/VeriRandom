@@ -34,6 +34,7 @@ public partial class VerificationSettingsPage : UserControl
     private DrawProofAttestationService AttestationService { get; } = IAppHost.GetService<DrawProofAttestationService>();    private ProofIntegrityVerifier IntegrityVerifier { get; } = IAppHost.GetService<ProofIntegrityVerifier>();
     private IExternalLauncher ExternalLauncher { get; } = IAppHost.GetService<IExternalLauncher>();
     private INistBeaconClient BeaconClient { get; } = IAppHost.GetService<INistBeaconClient>();
+    private BeaconEntropyProvider BeaconEntropy { get; } = IAppHost.GetService<BeaconEntropyProvider>();
     private DrawProofExportService ProofExporter { get; } = IAppHost.GetService<DrawProofExportService>();
     private OwnProofExportService OwnProofExporter { get; } = IAppHost.GetService<OwnProofExportService>();
     private bool _verificationModeSelectionReady;
@@ -329,8 +330,7 @@ public partial class VerificationSettingsPage : UserControl
         BeaconStatusText.Text = LR.M_BeaconFetching;
         try
         {
-            var endpoint = BeaconEndpointPolicy.Normalize(ConfigHandler.Data.General.Verification.BeaconEndpoint);
-            var pulse = await BeaconClient.GetLatestPulseAsync(endpoint, CancellationToken.None);
+            var pulse = await BeaconEntropy.FetchForTestAsync(CancellationToken.None);
             BeaconStatusText.Text = string.Format(
                 CultureInfo.CurrentCulture,
                 LR.M_BeaconFetched,
@@ -338,9 +338,12 @@ public partial class VerificationSettingsPage : UserControl
                 pulse.ChainIndex,
                 pulse.TimeStamp.ToLocalTime());
         }
-        catch (Exception)
+        catch (Exception exception)
         {
-            BeaconStatusText.Text = LR.M_BeaconFailed;
+            // The message names the source, the host and the HTTP status, so a blocked or throttled source is
+            // distinguishable from a wrong address. It is appended rather than formatted into the resource, so the
+            // three languages keep their existing sentence and no translation has to guess at a placeholder.
+            BeaconStatusText.Text = $"{LR.M_BeaconFailed}{Environment.NewLine}{exception.Message}";
         }
         finally
         {

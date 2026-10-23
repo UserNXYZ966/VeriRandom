@@ -126,6 +126,20 @@ public sealed class BeaconEntropyProvider(
 
     public bool IsEnabled => configHandler.Data.General.Verification.BeaconEntropyEnabled;
 
+    /// <summary>The source the next draw would use, after the unknown-id fallback.</summary>
+    public BeaconSource CurrentSource => ResolveSource();
+
+    /// <summary>
+    ///     Fetches one pulse from <see cref="CurrentSource" /> without reserving a sequence: the settings page's
+    ///     connectivity test. It goes through the same client as a real draw, so a refused host surfaces here with
+    ///     the same source-specific detail instead of only failing mid-draw.
+    /// </summary>
+    public Task<BeaconPulse> FetchForTestAsync(CancellationToken cancellationToken)
+    {
+        var source = ResolveSource();
+        return sourceClient.FetchLatestAsync(source, ResolveEndpoint(source), cancellationToken);
+    }
+
     public async Task<BeaconSeedReservation> ReserveAsync(CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
