@@ -91,6 +91,40 @@ public sealed class BeaconEntropyProvider(
         }
     }
 
+    /// <summary>
+    ///     The awaited form of <see cref="Prefetch" />, for the background scheduler: it needs a result (or a failure)
+    ///     to measure the round trip, which is what lets the tick stay aligned to the publication grid. Returns the
+    ///     measured latency of the fetch it started.
+    /// </summary>
+    public async Task<TimeSpan> PrefetchAsync(CancellationToken cancellationToken)
+    {
+        if (!IsEnabled)
+            return TimeSpan.Zero;
+
+        var source = ResolveSource();
+        var endpoint = ResolveEndpoint(source);
+
+        Task<BeaconPulse> pending;
+        lock (_prefetchGate)
+        {
+            // A prefetch that is still in flight is reused rather than replaced: two concurrent fetches for one slot
+            // would only race for the same cache slot.
+            if (_prefetched is { Pulse.IsCompleted: false } running)
+            {
+                pending = running.Pulse;
+            }
+            else
+            {
+                pending = sourceClient.FetchLatestAsync(source, endpoint, cancellationToken);
+                _prefetched = (source.Id, endpoint, pending, DateTimeOffset.UtcNow);
+            }
+        }
+
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
+        await pending.WaitAsync(cancellationToken).ConfigureAwait(false);
+        return System.Diagnostics.Stopwatch.GetElapsedTime(started);
+    }
+
     private async Task<BeaconPulse> TakePrefetchedPulseAsync(
         BeaconSource source,
         Uri endpoint,

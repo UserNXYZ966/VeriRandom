@@ -55,7 +55,7 @@ public sealed class NistBeaconClient(HttpClient httpClient, ILogger<NistBeaconCl
                 out var timeStamp))
             throw new InvalidDataException("Beacon pulse did not include a parseable timestamp.");
 
-        logger.LogDebug(
+        logger.LogTrace(
             "已获取信标脉冲：PulseIndex={PulseIndex}，ChainIndex={ChainIndex}，证书={CertificateId}。",
             pulse.PulseIndex, pulse.ChainIndex, pulse.CertificateId);
 

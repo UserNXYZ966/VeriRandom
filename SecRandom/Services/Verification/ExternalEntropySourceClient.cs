@@ -97,7 +97,7 @@ public sealed class ExternalEntropySourceClient(
                 var publishedAt = BeaconSourceCatalog.RoundTime(source, round.Round)
                     ?? throw new InvalidDataException($"drand round {round.Round} has no publication time.");
 
-                logger.LogDebug("已获取 drand 轮次：Round={Round}，主机={Host}，链哈希={ChainHash}。",
+                logger.LogTrace("已获取 drand 轮次：Round={Round}，主机={Host}，链哈希={ChainHash}。",
                     round.Round, requestUri.Host, source.ChainHash);
 
                 // The chain hash rides in the certificate slot: it answers the same "which authority published this"
@@ -114,7 +114,7 @@ public sealed class ExternalEntropySourceClient(
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
                 lastFailure = exception;
-                logger.LogWarning(exception, "drand 主机 {Host} 取回轮次失败，尝试下一个前端。", requestUri.Host);
+                logger.LogDebug(exception, "drand 主机 {Host} 取回轮次失败，尝试下一个前端。", requestUri.Host);
             }
         }
 
@@ -159,7 +159,7 @@ public sealed class ExternalEntropySourceClient(
         var output = builder.ToString();
         _ = BeaconSeedDerivation.DecodeOutputValue(output);
 
-        logger.LogDebug("已获取 random.org 随机字节 {Count} 个。", count);
+        logger.LogTrace("已获取 random.org 随机字节 {Count} 个。", count);
 
         // No round and no signature exist here, so the index stays 0 and the fetched bytes are the whole identity.
         return new BeaconPulse(0, 0, 0, DateTimeOffset.UtcNow, output, string.Empty, "random.org");
