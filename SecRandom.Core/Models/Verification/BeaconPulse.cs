@@ -21,4 +21,6 @@ public sealed record BeaconPulse(
     string OutputValue,
     string SignatureValue,
     string CertificateId,
-    int CipherSuite = -1);
+    int CipherSuite = -1,
+    string? SignaturePayload = null,
+    bool? SignatureVerified = null);

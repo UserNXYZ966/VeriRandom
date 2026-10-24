@@ -222,7 +222,10 @@ public sealed class BeaconEntropyProvider(
                 CipherSuite = pulse.CipherSuite,
                 BeaconSources = [$"{source.ProviderId}@{endpoint}"],
                 Sequence = sequence,
-                Derivation = BeaconSeedDerivation.DerivationId
+                Derivation = BeaconSeedDerivation.DerivationId,
+                // Both stay null unless the source signs its output; a reader treats null as "nothing to re-check".
+                SignaturePayload = pulse.SignaturePayload,
+                SignatureVerified = pulse.SignatureVerified
             });
         }
         finally

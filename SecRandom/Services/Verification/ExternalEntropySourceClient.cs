@@ -151,7 +151,10 @@ public sealed class ExternalEntropySourceClient(
                 DateTimeOffset.UtcNow,
                 signedHex,
                 signed.Signature,
-                signed.SerialNumber.ToString(CultureInfo.InvariantCulture));
+                signed.SerialNumber.ToString(CultureInfo.InvariantCulture),
+                -1,
+                signed.RawRandomJson,
+                signed.SignatureVerified);
         }
 
         var requestUri = new Uri(

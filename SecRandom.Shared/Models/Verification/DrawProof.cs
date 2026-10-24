@@ -122,6 +122,22 @@ public sealed class DrawProofBeacon
 
     [JsonPropertyName("derivation")]
     public string Derivation { get; init; } = string.Empty;
+
+    /// <summary>
+    ///     The raw response body a signature covers, recorded only for sources that sign their output (random.org's
+    ///     signed endpoint). Absent on every other source and on nodes written before this field existed, so readers
+    ///     must treat it as optional. It is never part of the attested proof hash, which covers a fixed field list the
+    ///     attestation service also knows; adding it there would make every submission mismatch.
+    /// </summary>
+    [JsonPropertyName("signaturePayload")]
+    public string? SignaturePayload { get; init; }
+
+    /// <summary>
+    ///     The verdict reached when the payload was fetched. It is a claim, not evidence: a verifier must re-check
+    ///     <see cref="SignaturePayload" /> against the authority's key rather than trust this flag.
+    /// </summary>
+    [JsonPropertyName("signatureVerified")]
+    public bool? SignatureVerified { get; init; }
 }
 
 /// <summary>
