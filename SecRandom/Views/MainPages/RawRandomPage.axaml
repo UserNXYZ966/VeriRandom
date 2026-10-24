@@ -1,0 +1,116 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:SecRandom.Views.MainPages"
+             xmlns:langs="using:SecRandom.Langs.MainPages.RawRandom"
+             xmlns:vm="using:SecRandom.ViewModels.MainPages"
+             x:Class="SecRandom.Views.MainPages.RawRandomPage"
+             x:DataType="local:RawRandomPage">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.section-title">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="15" />
+        </Style>
+        <Style Selector="TextBlock.field-label">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Opacity" Value="0.7" />
+        </Style>
+        <Style Selector="TextBlock.hint">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Opacity" Value="0.7" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="TextBlock.result">
+            <Setter Property="FontSize" Value="44" />
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+        <!-- 可复核性受损不是脚注：混入 random.org 或本地 CSPRNG 后结果不能作为证据，用警示色说清楚 -->
+        <Style Selector="TextBlock.reduced">
+            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="16" RowSpacing="12">
+
+        <StackPanel Grid.Row="0" Spacing="4">
+            <TextBlock Classes="section-title" Text="{x:Static langs:Resources.C_PageTitle}" />
+            <TextBlock Classes="hint" Text="{x:Static langs:Resources.M_PageDescription}" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="14">
+
+                <!-- 结果区：只有一个数，不放历史列表 —— 这个页面不做记录，历史在证明（后续）与抽取页里 -->
+                <Border CornerRadius="8" Padding="20"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Classes="result"
+                                   Text="{Binding ViewModel.ResultText}"
+                                   HorizontalAlignment="Center" />
+                        <TextBlock Classes="hint"
+                                   Text="{Binding ViewModel.StatusText}"
+                                   TextAlignment="Center" />
+                        <ProgressBar IsIndeterminate="True" IsVisible="{Binding ViewModel.IsBusy}" />
+                    </StackPanel>
+                </Border>
+
+                <Border CornerRadius="8" Padding="16"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+                    <StackPanel Spacing="12">
+
+                        <TextBlock Classes="section-title" Text="{x:Static langs:Resources.C_Range}" />
+                        <Grid ColumnDefinitions="*,16,*" ColumnSpacing="8">
+                            <StackPanel Grid.Column="0" Spacing="4">
+                                <TextBlock Classes="field-label" Text="{x:Static langs:Resources.C_LowerBound}" />
+                                <TextBox Text="{Binding ViewModel.LowerBoundText}"
+                                         IsEnabled="{Binding !ViewModel.IsSettingsLocked}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="4">
+                                <TextBlock Classes="field-label" Text="{x:Static langs:Resources.C_UpperBound}" />
+                                <TextBox Text="{Binding ViewModel.UpperBoundText}"
+                                         IsEnabled="{Binding !ViewModel.IsSettingsLocked}" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Classes="hint"
+                                   Text="{x:Static langs:Resources.M_LockedHint}"
+                                   IsVisible="{Binding ViewModel.IsSettingsLocked}" />
+                        <!-- 锁定开关本身永远可点：否则打开锁定等于把自己锁在门外 -->
+                        <CheckBox Content="{x:Static langs:Resources.C_LockSettings}"
+                                  IsChecked="{Binding ViewModel.IsSettingsLocked}" />
+
+                        <Separator />
+
+                        <TextBlock Classes="section-title" Text="{x:Static langs:Resources.C_EntropySources}" />
+                        <!--
+                            锁定是整段生效的：范围与熵源都由「更多设置」里的开关统一管，IsEnabled 沿视觉树继承下来，
+                            因此不用在每个 CheckBox 上做父级查找（那种绑定在 DataTemplate 里既脆又难读）。
+                        -->
+                        <StackPanel Spacing="8" IsEnabled="{Binding !ViewModel.IsSettingsLocked}">
+                            <ItemsControl ItemsSource="{Binding ViewModel.EntropySources}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:EntropySourceOption">
+                                        <CheckBox Content="{Binding DisplayName}"
+                                                  IsChecked="{Binding IsSelected}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <TextBlock Classes="hint"
+                                   Classes.reduced="{Binding ViewModel.IsVerifiabilityReduced}"
+                                   Text="{Binding ViewModel.VerifiabilityNotice}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2">
+            <Button x:Name="GenerateButton"
+                    Content="{x:Static langs:Resources.C_Generate}"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Classes="accent"
+                    Command="{Binding ViewModel.GenerateCommand}" />
+        </StackPanel>
+    </Grid>
+</UserControl>

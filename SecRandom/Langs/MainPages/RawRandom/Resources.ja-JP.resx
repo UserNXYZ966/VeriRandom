@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>1.3</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="C_EntropySources" xml:space="preserve"><value>エントロピー源</value></data>
+  <data name="C_Generate" xml:space="preserve"><value>生成</value></data>
+  <data name="C_LocalCsprng" xml:space="preserve"><value>ローカル CSPRNG</value></data>
+  <data name="C_LowerBound" xml:space="preserve"><value>下限</value></data>
+  <data name="C_LockSettings" xml:space="preserve"><value>範囲とエントロピー源をロック</value></data>
+  <data name="C_PageTitle" xml:space="preserve"><value>乱数</value></data>
+  <data name="C_Range" xml:space="preserve"><value>範囲</value></data>
+  <data name="C_SourceDrand" xml:space="preserve"><value>drand ネットワーク</value></data>
+  <data name="C_SourceNist" xml:space="preserve"><value>NIST ビーコン</value></data>
+  <data name="C_SourceRandomOrg" xml:space="preserve"><value>random.org</value></data>
+  <data name="C_UpperBound" xml:space="preserve"><value>上限</value></data>
+  <data name="M_GeneratedNotVerifiable" xml:space="preserve"><value>生成しましたが、検証できないエントロピー源が混ざっているため、この結果は再現可能な証拠になりません</value></data>
+  <data name="M_GeneratedVerifiable" xml:space="preserve"><value>単一の検証可能な源から生成しました。その源が公開したパルスから同じ数を再計算できます</value></data>
+  <data name="M_GenerateFailedFormat" xml:space="preserve"><value>生成に失敗しました：{0}</value></data>
+  <data name="M_Generating" xml:space="preserve"><value>生成中</value></data>
+  <data name="M_LockedHint" xml:space="preserve"><value>範囲とエントロピー源はロックされています。下のスイッチを解除すると変更できます</value></data>
+  <data name="M_NoEntropySource" xml:space="preserve"><value>エントロピー源を 1 つ以上選択してください</value></data>
+  <data name="M_NotVerifiableNotice" xml:space="preserve"><value>random.org またはローカル CSPRNG が選択されています：再現性が損なわれ、この結果は入力がこの数を出したことしか示さず、公平性の証拠にはなりません</value></data>
+  <data name="M_PageDescription" xml:space="preserve"><value>指定した範囲で生の乱数を 1 つ生成します（重複や復元は考慮しません）。検証可能な源を 1 つだけ選んだ場合、その源が公開したパルスから後で同じ数を再計算できます</value></data>
+  <data name="M_RangeInvalid" xml:space="preserve"><value>範囲が無効です：下限は上限を超えられず、どちらも整数である必要があります</value></data>
+  <data name="M_Ready" xml:space="preserve"><value>範囲とエントロピー源を設定して生成してください</value></data>
+  <data name="M_ResultFormat" xml:space="preserve"><value>結果：{0}</value></data>
+  <data name="M_VerifiableNotice" xml:space="preserve"><value>検証可能な源を 1 つだけ選択しています：その源が公開したパルスから後で同じ数を再計算できます</value></data>
+</root>

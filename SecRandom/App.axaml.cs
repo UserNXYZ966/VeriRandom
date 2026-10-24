@@ -1414,6 +1414,7 @@ public partial class App : Application
                 services.AddSingleton<RollCallPageViewModel>();
                 services.AddSingleton<QuickDrawPageViewModel>();
                 services.AddSingleton<LotteryPageViewModel>();
+                services.AddSingleton<RawRandomPageViewModel>();
                 services.AddTransient<RollCallHistoryViewModel>();
                 services.AddTransient<HomeSettingsPageViewModel>();
                 // "远程抽取"页的 ViewModel：**桌面/平板/手机三个宿主共用同一份**。它只跟协议有关，
@@ -1482,6 +1483,9 @@ public partial class App : Application
                         services.AddMainPage<RemoteDrawPage>(MobileResources.P_RemoteDraw);
 
                     services.AddMainPage<HistoryPage>(Langs.Common.Resources.Feat_History);
+
+                    // 「随机数」排在历史之后：远程抽取必须紧跟在抽奖之后（见上），因此新页不插进那两条之间。
+                    services.AddMainPage<RawRandomPage>(Langs.MainPages.RawRandom.Resources.C_PageTitle);
                 }
 
                 // 设置界面 Views

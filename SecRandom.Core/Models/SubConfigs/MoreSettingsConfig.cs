@@ -61,4 +61,11 @@ public partial class MoreSettingsConfig : ObservableObject
     [ObservableProperty] private string _decreaseLotteryCountShortcut = string.Empty;
     [ObservableProperty] private string _startRollCallShortcut = string.Empty;
     [ObservableProperty] private string _startLotteryShortcut = string.Empty;
+
+    // Raw-number page state. The bounds are remembered between sessions because a classroom reuses the same range
+    // (a dice roll, a seat number) far more often than it changes it; the lock switch is what an operator flips when
+    // the range has to stay fixed, so it lives here rather than as a separate pinned-entropy-source setting.
+    [ObservableProperty] private long _rawRandomLowerBound;
+    [ObservableProperty] private long _rawRandomUpperBound = 100;
+    [ObservableProperty] private bool _rawRandomSettingsLocked;
 }
