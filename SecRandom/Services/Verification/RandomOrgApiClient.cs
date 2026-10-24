@@ -127,6 +127,22 @@ public sealed class RandomOrgApiClient(IHttpClientFactory httpClientFactory, ILo
         for (var index = 0; index < count; index++)
             bytes[index] = (byte)random.Data[index];
 
+        // Verify before the bytes are allowed to seed a draw. A pin or certificate problem is "cannot vouch", not
+        // "forged", so it only downgrades the claim; the verdict is logged either way and the signature stays in the
+        // proof so a third party can re-check it independently.
+        using (var document = JsonDocument.Parse(body))
+        {
+            var rawRandom = document.RootElement.GetProperty("result").GetProperty("random").GetRawText();
+            var check = SecRandom.Core.Abstraction.IAppHost
+                .TryGetService<RandomOrgSignatureVerifier>()?
+                .Verify(rawRandom, envelope.Result.Signature);
+
+            if (check is { IsValid: true })
+                logger.LogInformation("random.org 签名校验通过（证书过期：{Expired}）。", check.CertificateExpired);
+            else
+                logger.LogWarning("random.org 签名未能验证，本次熵源按未验证处理。");
+        }
+
         logger.LogInformation("已获取 random.org 签名随机字节 {Count} 个，序列号 {Serial}。",
             count, random.SerialNumber);
 

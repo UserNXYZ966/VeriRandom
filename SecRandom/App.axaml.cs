@@ -1219,6 +1219,7 @@ public partial class App : Application
                 // random.org 的密钥是凭据：只进 data/config/randomorg/key.json，不进 settings.json 与任何备份。
                 services.AddSingleton<RandomOrgCredentialStore>();
                 services.AddSingleton<RandomOrgApiClient>();
+                services.AddSingleton<RandomOrgSignatureVerifier>();
                 services.AddSingleton<BeaconEntropyProvider>();                services.AddSingleton<DrawProofAttestationService>();
                 services.AddHostedService(serviceProvider =>
                     serviceProvider.GetRequiredService<DrawProofAttestationService>());
