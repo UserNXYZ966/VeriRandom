@@ -929,14 +929,21 @@
 
 **实现（沿用计时器小窗那条已验证的路子，不是新机制）**：
 
-- `Views/MainPages/ResultMiniWindow.axaml(.cs)`：直接派生 `Window`（`WindowDecorations=None`、`Topmost=True`、`ShowInTaskbar=False`、`CanResize=False`、透明背景 + 半透明圆角卡片）。内容就是主界面那个 `RollCallResultPresenter`，套在 `Viewbox` 里（设计尺寸 620×420，向下缩放），因此**结果、显示设置、动画全部仍由 Host 单例 `RollCallPageViewModel` 提供**，浮窗没有复制任何结果状态
+- `Views/MainPages/ResultMiniWindow.axaml(.cs)`：直接派生 `Window`（`WindowDecorations=None`、`Topmost=True`、`ShowInTaskbar=False`、`CanResize=True`、透明背景 + 半透明圆角卡片）。内容就是主界面那个 `RollCallResultPresenter`，套在 `Viewbox` 里（设计尺寸 620×420，向下缩放），因此**结果、显示设置、动画全部仍由 Host 单例 `RollCallPageViewModel` 提供**，浮窗没有复制任何结果状态
 - `Services/ViewEngine/ResultMiniWindowService.cs`：开窗/复用/还原。**顺序是承重的**：先 `Show()` 浮窗，再 `App.SetMainWindowVisibility("hide")` 收起主窗口——Avalonia 在最后一个窗口关闭时会退出应用，反过来做会在浮窗出现之前把整个应用关掉（与计时器小窗同一条规则）
 - 关闭浮窗（右上角按钮或窗口关闭）一律**还原主窗口**：让用户停在"只剩一张浮窗卡片、看不到任何窗口"的状态比多一次点击更糟
 - **桌面专有**：`RollCallPageViewModel.SupportsResultWindow => App.IsDesktop` 决定按钮是否出现，`ResultMiniWindowService` 只注册在 `BuildHost()` 的桌面分支。手机/平板把结果留在主界面里显示（`MobileDrawPage` 用的就是同一个 presenter）
 
 **拖动**：整块可拖动（`PointerPressed` → `BeginMoveDrag`），但按在按钮上时交给按钮（`IsButtonDescendant`），与计时器小窗一致。
 
-**边界**：它只是"换个容器显示同一份结果"，不是新的绘制通道、不新增设置项、不写任何配置；信标/证明/提交路径完全不受影响。
+**触控与大屏（本版新增）**：
+
+- **拖动接受触控**：`IsPrimaryContact` 在 `IsLeftButtonPressed` 之外同时接受 `PointerType.Touch`。原来的判断只看鼠标左键，所以在手指上**根本不响应**——而这块卡片最主要的用途恰恰是教室大屏
+- **可缩放**：8 块透明热区（边 22、角 48）覆盖在内容之上，各自 `BeginResizeDrag(WindowEdge, e)`，走平台自己的缩放循环而不是自己算指针位移——后者在任何显示缩放下都会抖，而且手指离开热区后继续缩放只有原生循环能做到。右下角额外画一条斜向握把痕迹（`Path` + `IsHitTestVisible=False`），否则没人知道这块能抓。`MinWidth/MinHeight` 240×220 防止被压成一团
+- **尺寸记忆**：`MoreSettings.ResultMiniWindowWidth/Height`（默认 360×320），关闭浮窗时写入，开窗时读回并用 `Sanitize` 夹住（非有限值、小于最小尺寸或大于 4000 的读数一律回退默认）。**位置不记忆**：卡片按当前显示器居中，记下的坐标在换成另一块屏时会把它放到屏幕外
+- **还原按钮 32 → 40**：大屏上 32px 的圆钮经常按偏
+
+**边界**：它只是"换个容器显示同一份结果"，不是新的绘制通道、不新增**设置页**入口、不写证明与信标相关配置；尺寸记忆只落在 `settings.json` 的 `moreSettings` 里，而配置策略只覆盖 `moreSettings.lotteryEnabled`，因此**不触发** `ConfigPolicyDigest.ScopeId` 升级。信标/证明/提交路径完全不受影响。
 
 ---
 

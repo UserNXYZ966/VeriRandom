@@ -68,4 +68,10 @@ public partial class MoreSettingsConfig : ObservableObject
     // SecuritySettingsConfig.ProtectRawRandomSettings and is released only by a fresh password.
     [ObservableProperty] private long _rawRandomLowerBound;
     [ObservableProperty] private long _rawRandomUpperBound = 100;
+
+    // Result mini-window size. Resizing it on a classroom touchscreen is a deliberate, effortful action, so the
+    // chosen size is remembered; the position is not, because the card re-centres on whichever display the app runs on
+    // and a remembered position from a disconnected monitor would put it off-screen.
+    [ObservableProperty] private double _resultMiniWindowWidth = 360;
+    [ObservableProperty] private double _resultMiniWindowHeight = 320;
 }
