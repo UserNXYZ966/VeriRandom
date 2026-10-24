@@ -180,7 +180,12 @@ public sealed class RandomOrgApiClient(IHttpClientFactory httpClientFactory, ILo
 
     private sealed record JsonRpcError(int Code, string Message);
 
-    private sealed record JsonRpcResult(RandomOrgUsagePayload Usage);
+    // getUsage returns bitsLeft/requestsLeft directly under result (there is no "usage" object); the computed
+    // property keeps the call site reading as a usage payload without inventing a nesting the service does not send.
+    private sealed record JsonRpcResult(int BitsLeft, int RequestsLeft)
+    {
+        public RandomOrgUsagePayload Usage => new(BitsLeft, RequestsLeft);
+    }
 
     private sealed record SignedIntegersResponse(JsonRpcError? Error, SignedIntegersResult? Result);
 
