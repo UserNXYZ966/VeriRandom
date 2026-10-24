@@ -123,8 +123,8 @@ public sealed class RandomOrgApiClient(IHttpClientFactory httpClientFactory, ILo
 
         var random = envelope.Result?.Random
             ?? throw new InvalidOperationException("random.org 的响应里没有随机数。");
-        if (random.Data.Count != count)
-            throw new InvalidOperationException($"random.org 返回了 {random.Data.Count} 个数，需要 {count} 个。");
+        if (random.Data.Length != count)
+            throw new InvalidOperationException($"random.org 返回了 {random.Data.Length} 个数，需要 {count} 个。");
         if (string.IsNullOrWhiteSpace(envelope.Result!.Signature))
             throw new InvalidOperationException("random.org 的响应里没有签名。");
 
