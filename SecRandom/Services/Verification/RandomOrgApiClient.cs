@@ -11,6 +11,12 @@ namespace SecRandom.Services.Verification;
 /// <summary>Quota reported by random.org for one API key.</summary>
 public sealed record RandomOrgUsage(int BitsLeft, int RequestsLeft);
 
+/// <summary>The signed form of one random.org draw: the bytes plus the material that proves their origin.</summary>
+/// <param name="Bytes">The random bytes themselves.</param>
+/// <param name="Signature">random.org's signature over the response, recorded verbatim so a verifier can re-check it.</param>
+/// <param name="SerialNumber">random.org's serial number for this response; it identifies the signed statement.</param>
+public sealed record RandomOrgSignedBytes(byte[] Bytes, string Signature, long SerialNumber);
+
 /// <summary>Raised when the key itself is rejected, as opposed to the request being unreadable.</summary>
 public sealed class RandomOrgKeyRejectedException(string message) : Exception(message);
 
@@ -72,18 +78,86 @@ public sealed class RandomOrgApiClient(IHttpClientFactory httpClientFactory, ILo
         return trimmed.Length <= 200 ? trimmed : trimmed[..200] + "…";
     }
 
-    private sealed record JsonRpcRequest(string Method, GetUsageParameters Params, int Id)
+    /// <summary>
+    ///     Asks random.org for <paramref name="count" /> signed random bytes and returns them with the signature.
+    /// </summary>
+    /// <remarks>
+    ///     This is the only "signed" call this build makes: the signature and the serial number are recorded verbatim in
+    ///     the proof so the response can be checked later against random.org's published signature key. Verifying it
+    ///     here would need that key and the exact byte layout random.org signs; neither is embedded in this repository,
+    ///     so a local check would either be wrong or pretend — the proof keeps the material instead.
+    /// </remarks>
+    public async Task<RandomOrgSignedBytes> GenerateSignedBytesAsync(
+        string apiKey,
+        int count,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(apiKey);
+        ArgumentOutOfRangeException.ThrowIfLessThan(count, 1);
+
+        var request = new JsonRpcRequest(
+            "generateSignedIntegers",
+            new GenerateSignedIntegersParameters(apiKey.Trim(), count, 0, 255, true),
+            1);
+        using var client = httpClientFactory.CreateClient(nameof(RandomOrgApiClient));
+        client.Timeout = RequestTimeout;
+
+        using var response = await client
+            .PostAsJsonAsync(Endpoint, request, JsonOptions, cancellationToken).ConfigureAwait(false);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+            throw new HttpRequestException(
+                $"random.org 返回 HTTP {(int)response.StatusCode}：{Trim(body)}", null, response.StatusCode);
+
+        var envelope = JsonSerializer.Deserialize<SignedIntegersResponse>(body, JsonOptions)
+            ?? throw new InvalidOperationException("random.org 返回了空响应。");
+
+        if (envelope.Error is { } error)
+            throw new RandomOrgKeyRejectedException($"random.org 拒绝了该请求（{error.Code}）：{error.Message}");
+
+        var random = envelope.Result?.Random
+            ?? throw new InvalidOperationException("random.org 的响应里没有随机数。");
+        if (random.Data.Count != count)
+            throw new InvalidOperationException($"random.org 返回了 {random.Data.Count} 个数，需要 {count} 个。");
+        if (string.IsNullOrWhiteSpace(envelope.Result!.Signature))
+            throw new InvalidOperationException("random.org 的响应里没有签名。");
+
+        var bytes = new byte[count];
+        for (var index = 0; index < count; index++)
+            bytes[index] = (byte)random.Data[index];
+
+        logger.LogInformation("已获取 random.org 签名随机字节 {Count} 个，序列号 {Serial}。",
+            count, random.SerialNumber);
+
+        return new RandomOrgSignedBytes(bytes, envelope.Result.Signature, random.SerialNumber);
+    }
+
+    private sealed record JsonRpcRequest(string Method, object Params, int Id)
     {
         public string JsonRpc { get; init; } = "2.0";
     }
 
     private sealed record GetUsageParameters(string ApiKey);
 
+    private sealed record GenerateSignedIntegersParameters(
+        string ApiKey,
+        int N,
+        int Min,
+        int Max,
+        bool Replacement);
+
     private sealed record JsonRpcResponse(JsonRpcError? Error, JsonRpcResult? Result);
 
     private sealed record JsonRpcError(int Code, string Message);
 
     private sealed record JsonRpcResult(RandomOrgUsagePayload Usage);
+
+    private sealed record SignedIntegersResponse(JsonRpcError? Error, SignedIntegersResult? Result);
+
+    private sealed record SignedIntegersResult(SignedRandom Random, string Signature);
+
+    private sealed record SignedRandom(long[] Data, long SerialNumber);
 
     private sealed record RandomOrgUsagePayload(int BitsLeft, int RequestsLeft);
 }

@@ -40,6 +40,8 @@ namespace SecRandom.Services.Verification;
 /// </remarks>
 public sealed class ExternalEntropySourceClient(
     INistBeaconClient nistClient,
+    RandomOrgCredentialStore randomOrgCredentials,
+    RandomOrgApiClient randomOrgApi,
     IHttpClientFactory httpClientFactory,
     ILogger<ExternalEntropySourceClient> logger)
 {
@@ -127,6 +129,31 @@ public sealed class ExternalEntropySourceClient(
         Uri endpoint,
         CancellationToken cancellationToken)
     {
+        // With a key, ask for the signed form: the response carries a signature and a serial number, which ride into the
+        // proof so the origin can be re-checked later. Without a key the plain unsigned endpoint is used, and the proof
+        // simply records that there is nothing to check.
+        if (randomOrgCredentials.Load() is { } apiKey)
+        {
+            var signed = await randomOrgApi
+                .GenerateSignedBytesAsync(apiKey, RandomOrgByteCount, cancellationToken).ConfigureAwait(false);
+            var signedHex = ToHex(signed.Bytes);
+            _ = BeaconSeedDerivation.DecodeOutputValue(signedHex);
+
+            logger.LogTrace("已获取 random.org 签名字节 {Count} 个，序列号 {Serial}。",
+                RandomOrgByteCount, signed.SerialNumber);
+
+            // The serial number rides in the certificate slot for the same reason drand's chain hash does: it answers
+            // "which signed statement is this", and the proof has no other free field for it.
+            return new BeaconPulse(
+                0,
+                0,
+                0,
+                DateTimeOffset.UtcNow,
+                signedHex,
+                signed.Signature,
+                signed.SerialNumber.ToString(CultureInfo.InvariantCulture));
+        }
+
         var requestUri = new Uri(
             endpoint,
             $"integers/?num={RandomOrgByteCount}&min=0&max=255&col=1&base=10&format=plain&rnd=new");
@@ -207,6 +234,15 @@ public sealed class ExternalEntropySourceClient(
                 $"熵源 {source.ProviderId} 的{what}请求失败：HTTP {(int)response.StatusCode}{hint}，来自 {requestUri.Host}。" +
                 $"响应：{Describe(body)}");
         }
+    }
+
+    private static string ToHex(byte[] bytes)
+    {
+        var builder = new StringBuilder(bytes.Length * 2);
+        foreach (var value in bytes)
+            builder.Append(value.ToString("x2", CultureInfo.InvariantCulture));
+
+        return builder.ToString();
     }
 
     private static string Describe(string body)
