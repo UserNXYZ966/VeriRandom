@@ -81,7 +81,7 @@
                         </ComboBox>
                         <Button x:Name="RandomOrgSetupButton"
                                 Content="{x:Static lv:Resources.C_RandomOrgSetup}"
-                                IsVisible="{Binding IsRandomOrgSourceSelected}"
+                                IsVisible="False"
                                 Click="ConfigureRandomOrgSigning_OnClick" />
                     </StackPanel>
                 </fa:FASettingsExpander.Footer>

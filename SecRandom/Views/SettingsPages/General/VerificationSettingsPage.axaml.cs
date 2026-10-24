@@ -301,11 +301,18 @@ public partial class VerificationSettingsPage : UserControl
             return;
 
         var source = BeaconSourceCatalog.All[index];
+
+        // Driven from code rather than bound to IsRandomOrgSourceSelected: the page raises no change notifications
+        // for derived properties, so a binding keeps whatever it evaluated at load and the button would never appear
+        // when the user switches to random.org afterwards.
+        RandomOrgSetupButton.IsVisible =
+            string.Equals(source.Id, BeaconSourceCatalog.RandomOrg.Id, StringComparison.Ordinal);
+
         if (string.Equals(ConfigHandler.Data.General.Verification.BeaconSourceId, source.Id, StringComparison.Ordinal))
             return;
 
         // Switching the source invalidates a cached pulse from the previous one only because the provider keys its
-        // cache by source id as well; nothing else has to be reset here, and the ComboBox already shows the pick.
+        // cache by source id as well; nothing else has to be reset here.
         ConfigHandler.Data.General.Verification.BeaconSourceId = source.Id;
         ConfigHandler.Save();
     }
