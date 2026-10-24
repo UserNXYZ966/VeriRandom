@@ -1135,7 +1135,12 @@
 | 文件 | 改动性质 |
 |---|---|
 | `SecRandom.Core/Services/Draw/RejectionSampler.cs` | 新增（Core 纯函数） |
-| `SecRandom.Core/Models/SubConfigs/MoreSettingsConfig.cs` | 新增字段 `RawRandomLowerBound` / `RawRandomUpperBound` / `RawRandomSettingsLocked` |
+| `SecRandom.Core/Models/Verification/RawNumberProof.cs` | 新增：裸随机数记录模型 + 链哈希规则 |
+| `SecRandom.Core/Services/Verification/RawNumberSeedDerivation.cs` | 新增：多源种子派生（Core 纯函数） |
+| `SecRandom.Core/Models/SubConfigs/MoreSettingsConfig.cs` | 新增字段 `RawRandomLowerBound` / `RawRandomUpperBound` |
+| `SecRandom.Core/Models/SubConfigs/SecuritySettingsConfig.cs` | 新增 `ProtectRawRandomSettings`（锁定属于防护，进加密文件） |
+| `SecRandom/Services/Security/SecurityService.cs` | 快照 / Capture / Restore / `IsProtectionDowngrade` / `DisableOperationProtections` 全部加入新防护 |
+| `SecRandom/Services/Verification/RawNumberProofService.cs` | 新增：`data/proofs/raw` 写盘、独立哈希链、写入后自校验 |
 | `SecRandom/ViewModels/MainPages/RawRandomPageViewModel.cs` | 新增 |
 | `SecRandom/Views/MainPages/RawRandomPage.axaml(.cs)` | 新增（`main.rawRandom`） |
 | `SecRandom/Langs/MainPages/RawRandom/` | 新增三语资源与 designer |
@@ -1151,9 +1156,13 @@
 - 混入 **random.org 或本地 CSPRNG** → 可复核性受损，界面给出警示色说明，而不是脚注
 - 无论哪种组合，它都**不能**证明"抽中了某个人"：没有名单就没有 `rosterDigest`
 
-**锁定语义**：`MoreSettings.RawRandomSettingsLocked` 持久化，页面内开关控制范围与熵源是否可改；锁定开关自身永远可点，否则打开锁定等于把自己锁在门外。上下界按"两侧都能解析且范围一致"才落盘，避免输入 `100` 的过程中把 `1` 写回去。`ConfigPolicyDigest` 只覆盖 `moreSettings.lotteryEnabled`，因此这三个字段**不触发** `ScopeId` 升级。
+**锁定语义（属于防护，不属于界面偏好）**：锁定状态是 `SecuritySettingsConfig.ProtectRawRandomSettings`，存在**加密的** `data/config/security/settings.json` 里，`settings.json` 无法表达它，导入配置也改不了它。页面内的开关永远可点，但**任何一次翻转都走 `ISecurityService.UpdateSecuritySettingsAsync`**：关掉锁定是"放宽防护"，必须重新输一次密码（设置页 sudo 与全局 sudo 都不满足），这正是"用安全密码保护这个锁"的含义；没有配置安全凭据时（`SecurityEnabled == false`）才直接落盘，否则会弹出一个根本无法满足的密码框。`SecuritySettingsSnapshot` 已同步加入该字段，否则解锁会被当成"没有放宽"而免验证；`DisableOperationProtections` 也在保护整体关闭时一并清掉它。上下界仍按"两侧都能解析且范围一致"才写入 `MoreSettings`，避免输入 `100` 的过程中把 `1` 写回去。
 
-**尚未接入证明**（下一轮）：生成过程可重放（记录范围 → 用同一脉冲重算 → 比对），计划以 `raw-v1` payload + 独立 `algorithmId` 复用 Up/Own 双链；不得复用抽签帧布局。
+**证明（已接入，本地链）**：每次生成都写一份 `data/proofs/raw/*.rawproof.json`，不提供"存这一份"按钮——能只存喜欢的结果，就等于选择性地留证据。记录包含范围、结果、每个熵源的原文（`OutputValue`、脉冲序号、时间、签名）、种子摘要，以及独立哈希链（`index` / `prevHash` / `selfHash`，头文件 `chain-head.json`）。**与抽签链分开**：`ProofIntegrityVerifier` 用抽签内核判定抽签链，把无法解码的记录塞进去会让每一次裸随机数都变成"链有缺口"。写入后立刻用记录自身**重算种子与结果**并复核链哈希，不通过就记警告并把界面文案改成"请勿使用这份记录"。
+
+**证明的边界**：它**不**提交给 `fair.sectl.cn`。那个服务按固定字段允许列表和固定算法 id 校验匿名审计载荷，裸随机数既没有名单也没有抽签载荷，提交只会得到永久失败的证明画像。`Verifiable` 字段的含义仅是"事后有权威物可核"（恰好一个发布型来源），混合源或本地种子照样记录、照样自洽，只是无法重新锚定。
+
+**尚未接入**：证明重放窗口目前只列抽签证明（`*.srproof.json`），裸随机数记录还没有画布入口；重算逻辑已经在 `RawNumberProofService.Verify` 里，接窗口即可。
 
 ---
 
