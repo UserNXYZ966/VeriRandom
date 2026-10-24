@@ -57,6 +57,12 @@
                 Background="{DynamicResource ControlFillColorSecondaryBrush}">
             <ScrollViewer>
                 <StackPanel Spacing="8">
+                    <!-- 证明可以来自任意目录：跨设备核验时把对方导出的证明文件夹选进来即可 -->
+                    <Button x:Name="LoadFolderButton"
+                            HorizontalAlignment="Stretch"
+                            Content="{x:Static lv:Resources.S_ProofFolder}"
+                            Click="LoadFolder_OnClick" />
+                    <Separator Margin="0 4" />
                     <TextBlock x:Name="SelectedTitleText" FontWeight="SemiBold" TextWrapping="Wrap" />
                     <TextBlock x:Name="SelectedDetailText" FontSize="12" TextWrapping="Wrap"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />

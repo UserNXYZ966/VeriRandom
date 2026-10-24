@@ -38,6 +38,8 @@ public sealed partial class ProofReplayView : ViewBase
     private readonly ProofReplayFileService _replayService;
     private readonly Dictionary<string, Border> _nodeBorders = [];
     private IReadOnlyList<ProofReplayNode> _nodes = [];
+    /// <summary>Folder the nodes were read from; null means this installation's own proof store.</summary>
+    private string? _root;
     private ProofReplayNode? _selected;
     private ProofRosterContext? _roster;
 
@@ -53,13 +55,46 @@ public sealed partial class ProofReplayView : ViewBase
 
     private void LoadNodes()
     {
-        _nodes = _replayService.LoadNodes();
+        _nodes = _replayService.LoadNodes(_root);
         RenderChain();
 
-        SummaryText.Text = _nodes.Count == 0
+        var summary = _nodes.Count == 0
             ? LR.M_ProofReplay_Empty
             : string.Format(LR.M_ProofReplay_Summary, _nodes.Count, _nodes[0].ChainIndex, _nodes[^1].ChainIndex);
+
+        // The folder is stated before the counts: after loading someone else's proofs, "which chain am I looking at"
+        // is the first thing a reviewer needs to be sure of.
+        SummaryText.Text = _root is null ? summary : $"{_root}{Environment.NewLine}{summary}";
+
+        _selected = null;
+        ReplayButton.IsEnabled = false;
+        UseCurrentRosterButton.IsEnabled = false;
+        AssessTrustButton.IsEnabled = false;
         SelectedTitleText.Text = LR.M_ProofReplay_SelectHint;
+        SelectedDetailText.Text = string.Empty;
+    }
+
+    /// <summary>
+    ///     Reads proofs from any folder the user picks, so a record produced on another machine can be replayed and
+    ///     graded here. The folder is searched recursively, which matches the local <c>&lt;yyyy-MM&gt;/&lt;date&gt;</c>
+    ///     layout an exported proof store keeps.
+    /// </summary>
+    private async void LoadFolder_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage)
+            return;
+
+        var folders = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = LR.S_ProofFolder,
+            AllowMultiple = false
+        });
+
+        if (folders.FirstOrDefault()?.TryGetLocalPath() is not { } path)
+            return;
+
+        _root = path;
+        LoadNodes();
     }
 
     private void RenderChain()

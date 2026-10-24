@@ -81,10 +81,15 @@ public sealed class ProofReplayFileService(
     ///     Every retained proof in hash-chain order. A proof without a chain block cannot be placed in the chain and
     ///     is skipped with a log line rather than dropped silently.
     /// </summary>
-    public IReadOnlyList<ProofReplayNode> LoadNodes()
+    /// <param name="rootDirectory">
+    ///     A folder to read instead of this installation's <c>data/proofs</c> — the cross-device case, where the
+    ///     proofs came from another machine. The folder is walked recursively because the local layout is
+    ///     <c>&lt;yyyy-MM&gt;/&lt;yyyy-MM-dd&gt;/*.srproof.json</c>, and an exported folder keeps it.
+    /// </param>
+    public IReadOnlyList<ProofReplayNode> LoadNodes(string? rootDirectory = null)
     {
         var nodes = new List<ProofReplayNode>();
-        foreach (var path in proofExporter.EnumerateProofPaths())
+        foreach (var path in EnumerateProofPaths(rootDirectory))
         {
             if (!proofExporter.TryRead(path, out var proof) || proof is null)
             {
@@ -102,6 +107,16 @@ public sealed class ProofReplayFileService(
         }
 
         return nodes.OrderBy(node => node.ChainIndex).ToArray();
+    }
+
+    private IEnumerable<string> EnumerateProofPaths(string? rootDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(rootDirectory))
+            return proofExporter.EnumerateProofPaths();
+
+        return Directory.Exists(rootDirectory)
+            ? Directory.EnumerateFiles(rootDirectory, "*.srproof.json", SearchOption.AllDirectories)
+            : [];
     }
 
     /// <summary>
@@ -238,7 +253,7 @@ public sealed class ProofReplayFileService(
         }
 
         return ProofTrustScorer.Evaluate(new ProofTrustInput(
-            IsChainIntactFor(node.Path),
+            IsChainIntactFor(node.Path, proof),
             beacon is not null,
             timestampValid,
             WitnessClient.TryValidateStoredReceipt(proof, out _),
@@ -250,16 +265,40 @@ public sealed class ProofReplayFileService(
             witnessConfidence));
     }
 
-    private bool IsChainIntactFor(string path)
+    /// <summary>
+    ///     Whether the selected proof can vouch for its own position in the chain.
+    /// </summary>
+    /// <remarks>
+    ///     A proof from this installation is judged by the full local verdict — head, retention floor and removal
+    ///     ledger included. A proof read from a folder the user picked is judged by its own self-hash only, because a
+    ///     folder handed over from another machine cannot prove that it holds the whole chain: reporting the local
+    ///     chain's health for a foreign file would be answering a different question.
+    /// </remarks>
+    private bool IsChainIntactFor(string path, DrawProof proof)
     {
-        var report = integrityVerifier.Verify();
-        if (report.Gaps > 0 || report.BrokenLinks > 0 || report.BeyondHead > 0)
+        var isLocalProof = proofExporter.EnumerateProofPaths()
+            .Any(candidate => string.Equals(candidate, path, StringComparison.OrdinalIgnoreCase));
+
+        if (isLocalProof)
+        {
+            var report = integrityVerifier.Verify();
+            if (report.Gaps > 0 || report.BrokenLinks > 0 || report.BeyondHead > 0)
+                return false;
+
+            return report.Issues.All(issue =>
+                issue.Kind is not (ProofIntegrityIssueKind.Modified or ProofIntegrityIssueKind.Unreadable
+                    or ProofIntegrityIssueKind.UnsupportedVersion)
+                || !string.Equals(issue.Path, path, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (proof.Chain is not { } chain)
             return false;
 
-        return report.Issues.All(issue =>
-            issue.Kind is not (ProofIntegrityIssueKind.Modified or ProofIntegrityIssueKind.Unreadable
-                or ProofIntegrityIssueKind.UnsupportedVersion)
-            || !string.Equals(issue.Path, path, StringComparison.OrdinalIgnoreCase));
+        return string.Equals(
+            ProofChainStore.ComputeSelfHash(
+                chain.Index, chain.PreviousHash, WitnessClient.ComputeAttestedProofHash(proof)),
+            chain.SelfHash,
+            StringComparison.Ordinal);
     }
 
     private static IReadOnlyList<string> ResolveNames(
