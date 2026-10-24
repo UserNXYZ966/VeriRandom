@@ -1130,3 +1130,30 @@
 
 ---
 
+## 43. 主界面「随机数」页（`main.rawRandom`）：裸随机数 + 拒绝采样
+
+| 文件 | 改动性质 |
+|---|---|
+| `SecRandom.Core/Services/Draw/RejectionSampler.cs` | 新增（Core 纯函数） |
+| `SecRandom.Core/Models/SubConfigs/MoreSettingsConfig.cs` | 新增字段 `RawRandomLowerBound` / `RawRandomUpperBound` / `RawRandomSettingsLocked` |
+| `SecRandom/ViewModels/MainPages/RawRandomPageViewModel.cs` | 新增 |
+| `SecRandom/Views/MainPages/RawRandomPage.axaml(.cs)` | 新增（`main.rawRandom`） |
+| `SecRandom/Langs/MainPages/RawRandom/` | 新增三语资源与 designer |
+| `SecRandom/App.axaml.cs` | `AddMainPage<RawRandomPage>` + `AddSingleton<RawRandomPageViewModel>` |
+| `SecRandom/SecRandom.csproj` | 登记 base resx + designer |
+
+**为什么不是第四个抽签页**：`DrawEngine` 要求具体候选池，而裸随机数的范围可达 1..10⁹——物化候选既浪费又无意义。这里用**拒绝采样**：种子经 SHA-256 计数器模式展开，落在尾部不满一整块的值丢弃重来，因此不存在取模偏差（`value % span` 在 `span` 不整除 2⁶⁴ 时偏向低位）。放回语义不考虑，一次只产出一个数。
+
+**与信标路径的分工**：不复用 `BeaconEntropyProvider`。那个服务按 `BeaconSourceId` 绑死单一来源，并为**抽签**信标序号写锚点（一次抽取占一个序号）；本页允许一次勾选多个来源，走"就地取数 + 哈希合并"（`SHA256("VeriRandomRaw/v1" ‖ 各源 id ‖ 各源输出)`），不占抽签序号，也不写抽签证明。
+
+**可复核性的边界（界面必须说清）**：
+- 只勾选**单一**可验证源（NIST / drand）→ 结果可用该源公布的公开脉冲重算
+- 混入 **random.org 或本地 CSPRNG** → 可复核性受损，界面给出警示色说明，而不是脚注
+- 无论哪种组合，它都**不能**证明"抽中了某个人"：没有名单就没有 `rosterDigest`
+
+**锁定语义**：`MoreSettings.RawRandomSettingsLocked` 持久化，页面内开关控制范围与熵源是否可改；锁定开关自身永远可点，否则打开锁定等于把自己锁在门外。上下界按"两侧都能解析且范围一致"才落盘，避免输入 `100` 的过程中把 `1` 写回去。`ConfigPolicyDigest` 只覆盖 `moreSettings.lotteryEnabled`，因此这三个字段**不触发** `ScopeId` 升级。
+
+**尚未接入证明**（下一轮）：生成过程可重放（记录范围 → 用同一脉冲重算 → 比对），计划以 `raw-v1` payload + 独立 `algorithmId` 复用 Up/Own 双链；不得复用抽签帧布局。
+
+---
+
