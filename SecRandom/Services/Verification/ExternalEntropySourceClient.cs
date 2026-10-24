@@ -121,7 +121,7 @@ public sealed class ExternalEntropySourceClient(
         }
 
         throw new BeaconEntropyException(
-            $"熵源 {source.ProviderId} 的所有前端都取回失败：{lastFailure?.Message}", lastFailure);
+            $"熵源 {source.ProviderId} 的所有前端都取回失败：{lastFailure?.Message}", lastFailure!);
     }
 
     private async Task<BeaconPulse> FetchRandomOrgAsync(

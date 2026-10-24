@@ -296,7 +296,7 @@ public sealed class ProofReplayFileService(
 
         return string.Equals(
             ProofChainStore.ComputeSelfHash(
-                chain.Index, chain.PreviousHash, WitnessClient.ComputeAttestedProofHash(proof)),
+                chain.Index, chain.PrevHash, WitnessClient.ComputeAttestedProofHash(proof)),
             chain.SelfHash,
             StringComparison.Ordinal);
     }

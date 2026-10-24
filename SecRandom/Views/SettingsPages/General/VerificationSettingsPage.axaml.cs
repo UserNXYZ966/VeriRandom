@@ -337,7 +337,7 @@ public partial class VerificationSettingsPage : UserControl
 
         var keyBox = new TextBox
         {
-            Watermark = LR.C_RandomOrgKeyPlaceholder,
+            PlaceholderText = LR.C_RandomOrgKeyPlaceholder,
             PasswordChar = '•',
             Text = IAppHost.GetService<RandomOrgCredentialStore>().Load() ?? string.Empty
         };
