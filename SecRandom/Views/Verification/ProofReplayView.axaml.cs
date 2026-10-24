@@ -123,27 +123,28 @@ public sealed partial class ProofReplayView : ViewBase
                 ChainCanvas.Children.Add(link);
             }
 
+            var timeText = new TextBlock
+            {
+                Text = node.CreatedAtUtc.ToLocalTime().ToString("MM-dd HH:mm:ss"),
+                FontSize = 12,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center
+            };
+            // A batch assessment writes its score into this block, so it is kept per node.
+            var indexText = new TextBlock
+            {
+                Text = $"#{node.ChainIndex}",
+                FontSize = 11,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center
+            };
+            _nodeScoreTexts[node.Path] = indexText;
+
             var border = new Border
             {
                 Child = new StackPanel
                 {
                     VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
                     HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
-                    Children =
-                    {
-                        new TextBlock
-                        {
-                            Text = node.CreatedAtUtc.ToLocalTime().ToString("MM-dd HH:mm:ss"),
-                            FontSize = 12,
-                            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center
-                        },
-                        new TextBlock
-                        {
-                            Text = $"#{node.ChainIndex}",
-                            FontSize = 11,
-                            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center
-                        }
-                    }
+                    Children = { timeText, indexText }
                 }
             };
             border.Classes.Add("chainNode");
@@ -209,6 +210,71 @@ public sealed partial class ProofReplayView : ViewBase
     ///     user has to be able to confirm that the list about to be used really is the one the class is looking at.
     ///     The draw kind comes from the selected node, so a prize draw previews the current prize pool.
     /// </remarks>
+    private readonly Dictionary<string, int> _nodeScores = [];
+    private readonly Dictionary<string, TextBlock> _nodeScoreTexts = [];
+
+    /// <summary>
+    ///     Grades every loaded proof in one pass and writes each score onto its node, so a reviewer can see at a
+    ///     glance which records are well backed before clicking any of them.
+    /// </summary>
+    /// <remarks>
+    ///     The social-witness factor is excluded: it compares one remembered draw time against one proof, so a batch
+    ///     has no single value for it. It is unchecked and disabled for the run and restored afterwards.
+    /// </remarks>
+    private void AssessAll_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_nodes.Count == 0)
+            return;
+
+        var trusted = new List<ProofTrustSource>();
+        if (TrustBeacon.IsChecked == true)
+            trusted.Add(ProofTrustSource.BeaconProvider);
+        if (TrustTimestamp.IsChecked == true)
+            trusted.Add(ProofTrustSource.TimestampAuthority);
+        if (TrustServer.IsChecked == true)
+            trusted.Add(ProofTrustSource.SectlServer);
+
+        if (trusted.Count == 0)
+        {
+            TrustResultText.Text = LR.M_ProofTrust_SelectSource;
+            return;
+        }
+
+        try
+        {
+            TrustWitness.IsChecked = false;
+            TrustWitness.IsEnabled = false;
+
+            _nodeScores.Clear();
+            foreach (var node in _nodes)
+            {
+                var report = _replayService.AssessTrust(node, trusted, null, WitnessTimeConfidence.High);
+                _nodeScores[node.Path] = report.Score;
+            }
+
+            RenderScores();
+            TrustResultText.Text = string.Format(
+                CultureInfo.CurrentCulture, LR.M_ProofReplay_AssessedAll, _nodes.Count);
+        }
+        finally
+        {
+            TrustWitness.IsEnabled = true;
+        }
+    }
+
+    private void RenderScores()
+    {
+        foreach (var node in _nodes)
+        {
+            if (!_nodeScoreTexts.TryGetValue(node.Path, out var text))
+                continue;
+
+            text.Text = _nodeScores.TryGetValue(node.Path, out var score)
+                ? $"#{node.ChainIndex} · {score}%"
+                : $"#{node.ChainIndex}";
+        }
+    }
+
     private async void UseCurrentRoster_OnClick(object? sender, RoutedEventArgs e)
     {
         if (_selected is not { } node || TopLevel.GetTopLevel(this) is not { } topLevel)

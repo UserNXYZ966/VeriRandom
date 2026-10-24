@@ -50,6 +50,12 @@
   <data name="C_ProofReplay_Run" xml:space="preserve">
     <value>この抽選を再現する</value>
   </data>
+  <data name="C_ProofReplay_AssessAll" xml:space="preserve">
+    <value>一括評価</value>
+  </data>
+  <data name="M_ProofReplay_AssessedAll" xml:space="preserve">
+    <value>{0} 件を評価し、スコアをノードに表示しました</value>
+  </data>
   <data name="C_ProofReplay_JumpLatest" xml:space="preserve">
     <value>最新の証明へ移動</value>
   </data>

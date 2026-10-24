@@ -128,6 +128,12 @@
   <data name="C_ProofReplay_Run" xml:space="preserve">
     <value>重放本次抽取</value>
   </data>
+  <data name="C_ProofReplay_AssessAll" xml:space="preserve">
+    <value>批量评估</value>
+  </data>
+  <data name="M_ProofReplay_AssessedAll" xml:space="preserve">
+    <value>已评估 {0} 份证明，分数标在节点上</value>
+  </data>
   <data name="C_ProofReplay_JumpLatest" xml:space="preserve">
     <value>跳转到最新证明</value>
   </data>

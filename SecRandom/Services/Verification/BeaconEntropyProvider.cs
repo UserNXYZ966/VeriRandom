@@ -73,7 +73,9 @@ public sealed class BeaconEntropyProvider(
     /// </summary>
     public void Prefetch()
     {
-        if (!IsEnabled)
+        // random.org metes out a per-IP quota, so it is never prefetched: a cached fetch would spend the allowance on
+        // a draw that may never happen.
+        if (!IsEnabled || ResolveSource().Kind == BeaconSourceKind.RandomOrgEntropy)
             return;
 
         var source = ResolveSource();
@@ -99,7 +101,8 @@ public sealed class BeaconEntropyProvider(
     /// </summary>
     public async Task<TimeSpan> PrefetchAsync(CancellationToken cancellationToken)
     {
-        if (!IsEnabled)
+        // Same rule as Prefetch: random.org is fetched only when a draw actually needs it, never speculatively.
+        if (!IsEnabled || ResolveSource().Kind == BeaconSourceKind.RandomOrgEntropy)
             return TimeSpan.Zero;
 
         var source = ResolveSource();

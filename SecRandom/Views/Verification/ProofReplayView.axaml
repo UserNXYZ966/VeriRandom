@@ -133,6 +133,10 @@
                             IsEnabled="False"
                             Content="{x:Static lv:Resources.C_ProofTrust_Assess}"
                             Click="AssessTrust_OnClick" />
+                    <Button x:Name="AssessAllButton"
+                            HorizontalAlignment="Stretch"
+                            Content="{x:Static lv:Resources.C_ProofReplay_AssessAll}"
+                            Click="AssessAll_OnClick" />
                     <TextBlock x:Name="TrustResultText" FontSize="12" TextWrapping="Wrap"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                 </StackPanel>
