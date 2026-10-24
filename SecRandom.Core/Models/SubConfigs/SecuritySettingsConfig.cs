@@ -55,6 +55,12 @@ public partial class SecuritySettingsConfig : ObservableObject
     [ObservableProperty] private bool _protectLinkage;
 
     /// <summary>
+    ///     锁定主界面「随机数」页的范围与熵源选择。它是一项防护而不是普通界面偏好：解锁会放宽对"这次抽取用了哪个
+    ///     范围、哪个来源"的约束，因此关掉它必须重新输密码，且该开关本身随安全设置一起存进加密文件。
+    /// </summary>
+    [ObservableProperty] private bool _protectRawRandomSettings;
+
+    /// <summary>
     ///     Sudo 模式总开关。关闭后每一次受保护操作都要重新验证。
     /// </summary>
     [ObservableProperty] private bool _sudoModeEnabled = true;

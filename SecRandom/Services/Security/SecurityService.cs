@@ -1109,6 +1109,7 @@ internal sealed class SecurityService(
         bool ProtectLotteryStart,
         bool ProtectLotteryReset,
         bool ProtectLinkage,
+        bool ProtectRawRandomSettings,
         bool SettingsIntegrityCheckEnabled,
         SettingsIntegrityAction SettingsIntegrityAction,
         SettingsIntegrityRestoreSource SettingsIntegrityRestoreSource,
@@ -1134,6 +1135,7 @@ internal sealed class SecurityService(
             settings.ProtectLotteryStart,
             settings.ProtectLotteryReset,
             settings.ProtectLinkage,
+            settings.ProtectRawRandomSettings,
             settings.SettingsIntegrityCheckEnabled,
             settings.SettingsIntegrityAction,
             settings.SettingsIntegrityRestoreSource,
@@ -1159,6 +1161,7 @@ internal sealed class SecurityService(
             settings.ProtectLotteryStart = ProtectLotteryStart;
             settings.ProtectLotteryReset = ProtectLotteryReset;
             settings.ProtectLinkage = ProtectLinkage;
+            settings.ProtectRawRandomSettings = ProtectRawRandomSettings;
             settings.SettingsIntegrityCheckEnabled = SettingsIntegrityCheckEnabled;
             settings.SettingsIntegrityAction = SettingsIntegrityAction;
             settings.SettingsIntegrityRestoreSource = SettingsIntegrityRestoreSource;
@@ -1192,6 +1195,7 @@ internal sealed class SecurityService(
             || Removed(ProtectLotteryStart, after.ProtectLotteryStart)
             || Removed(ProtectLotteryReset, after.ProtectLotteryReset)
             || Removed(ProtectLinkage, after.ProtectLinkage)
+            || Removed(ProtectRawRandomSettings, after.ProtectRawRandomSettings)
             || after.SudoModeDurationSeconds > SudoModeDurationSeconds;
 
         private static bool Removed(bool before, bool after) => before && !after;
@@ -1244,6 +1248,7 @@ internal sealed class SecurityService(
         Settings.ProtectLotteryStart = false;
         Settings.ProtectLotteryReset = false;
         Settings.ProtectLinkage = false;
+        Settings.ProtectRawRandomSettings = false;
     }
 
     public bool IsSudoModeActive()

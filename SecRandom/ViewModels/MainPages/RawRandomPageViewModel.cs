@@ -2,18 +2,22 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
+using SecRandom.Core.Models.Verification;
 using SecRandom.Core.Services.Config;
 using SecRandom.Core.Services.Draw;
 using SecRandom.Core.Services.Verification;
 using SecRandom.Langs.MainPages.RawRandom;
+using SecRandom.Services.Security;
 using SecRandom.Services.Verification;
 
 namespace SecRandom.ViewModels.MainPages;
@@ -42,10 +46,13 @@ namespace SecRandom.ViewModels.MainPages;
 public partial class RawRandomPageViewModel : ViewModelBase
 {
     /// <summary>Sentinel id for the local CSPRNG pseudo-source, which is not part of the beacon catalog.</summary>
-    public const string LocalSourceId = "local-csprng";
+    public const string LocalSourceId = RawNumberProofFormat.LocalSourceId;
 
     private readonly ExternalEntropySourceClient _entropySourceClient;
+    private readonly RawNumberProofService _proofService;
     private readonly MainConfigHandler _configHandler;
+    private readonly SecuritySettingsStore _securitySettings;
+    private readonly ISecurityService _securityService;
     private readonly ILogger<RawRandomPageViewModel> _logger;
 
     /// <summary>
@@ -57,10 +64,16 @@ public partial class RawRandomPageViewModel : ViewModelBase
     public RawRandomPageViewModel(
         MainConfigHandler configHandler,
         ExternalEntropySourceClient entropySourceClient,
+        RawNumberProofService proofService,
+        SecuritySettingsStore securitySettings,
+        ISecurityService securityService,
         ILogger<RawRandomPageViewModel> logger) : base(configHandler)
     {
         _configHandler = configHandler;
         _entropySourceClient = entropySourceClient;
+        _proofService = proofService;
+        _securitySettings = securitySettings;
+        _securityService = securityService;
         _logger = logger;
 
         var more = configHandler.Data.MoreSettings;
@@ -68,7 +81,7 @@ public partial class RawRandomPageViewModel : ViewModelBase
         _isLoading = true;
         LowerBoundText = more.RawRandomLowerBound.ToString();
         UpperBoundText = more.RawRandomUpperBound.ToString();
-        IsSettingsLocked = more.RawRandomSettingsLocked;
+        RefreshLockState();
 
         EntropySources = new ObservableCollection<EntropySourceOption>(
             BeaconSourceCatalog.All.Select(source => new EntropySourceOption(
@@ -128,13 +141,33 @@ public partial class RawRandomPageViewModel : ViewModelBase
 
         try
         {
-            var seed = await DeriveSeedAsync(selected).ConfigureAwait(true);
+            var entropy = await CollectEntropyAsync(selected).ConfigureAwait(true);
+
+            var seed = RawNumberSeedDerivation.Derive(entropy
+                .Select(item => new RawNumberEntropyInput(item.SourceId, item.OutputValue))
+                .ToList());
             var value = RejectionSampler.Sample(lower, upper, seed);
 
+            var proof = new RawNumberProof
+            {
+                LowerBound = lower,
+                UpperBound = upper,
+                Value = value,
+                Verifiable = !IsVerifiabilityReduced,
+                SeedDigest = RawNumberSeedDerivation.Digest(seed),
+                Entropy = entropy
+            };
+
+            // The record is written on every generation, not on request: a number nobody wrote down is exactly the
+            // case this page exists to avoid, and a "save this one" button invites saving only the results someone
+            // liked.
+            var path = await _proofService.SaveAsync(proof).ConfigureAwait(true);
+            var verification = _proofService.Verify(proof);
+
             ResultText = string.Format(Resources.M_ResultFormat, value);
-            StatusText = IsVerifiabilityReduced
-                ? Resources.M_GeneratedNotVerifiable
-                : Resources.M_GeneratedVerifiable;
+            StatusText = verification.Succeeded
+                ? string.Format(Resources.M_ProofSavedFormat, Path.GetFileName(path))
+                : Resources.M_ProofVerifyFailed;
         }
         catch (Exception exception)
         {
@@ -151,24 +184,26 @@ public partial class RawRandomPageViewModel : ViewModelBase
     }
 
     /// <summary>
-    ///     Hashes every selected source's published output, in catalog order, into one 32-byte seed. Local CSPRNG
-    ///     material is hashed in the same way; the domain separator keeps this derivation apart from the draw seed
-    ///     derivations even though both end up as a SHA-256 digest.
+    ///     Fetches every selected source in the order the user sees them and keeps each contribution verbatim. Local
+    ///     CSPRNG material is recorded as hex as well, so the proof holds the exact bytes the derivation consumed even
+    ///     though nothing external can re-anchor them.
     /// </summary>
-    private async Task<byte[]> DeriveSeedAsync(IReadOnlyList<EntropySourceOption> selected)
+    private async Task<List<RawNumberProofEntropy>> CollectEntropyAsync(
+        IReadOnlyList<EntropySourceOption> selected)
     {
-        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        hash.AppendData(Encoding.ASCII.GetBytes("VeriRandomRaw/v1"));
+        var entries = new List<RawNumberProofEntropy>();
 
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(20));
 
         foreach (var option in selected)
         {
-            hash.AppendData(Encoding.ASCII.GetBytes(option.Id));
-
-            if (option.Id == LocalSourceId)
+            if (option.Id == RawNumberProofFormat.LocalSourceId)
             {
-                hash.AppendData(RandomNumberGenerator.GetBytes(32));
+                entries.Add(new RawNumberProofEntropy
+                {
+                    SourceId = RawNumberProofFormat.LocalSourceId,
+                    OutputValue = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant()
+                });
                 continue;
             }
 
@@ -177,10 +212,18 @@ public partial class RawRandomPageViewModel : ViewModelBase
                 .FetchLatestAsync(source, new Uri(source.Endpoint), cancellation.Token)
                 .ConfigureAwait(true);
 
-            hash.AppendData(Encoding.ASCII.GetBytes(pulse.OutputValue));
+            entries.Add(new RawNumberProofEntropy
+            {
+                SourceId = source.Id,
+                OutputValue = pulse.OutputValue,
+                PulseIndex = pulse.PulseIndex,
+                TimeStamp = pulse.TimeStamp,
+                SignatureValue = pulse.SignatureValue,
+                SignatureVerified = pulse.SignatureVerified
+            });
         }
 
-        return hash.GetHashAndReset();
+        return entries;
     }
 
     private bool TryReadRange(out long lower, out long upper)
@@ -231,13 +274,44 @@ public partial class RawRandomPageViewModel : ViewModelBase
 
     partial void OnUpperBoundTextChanged(string value) => PersistRange();
 
-    partial void OnIsSettingsLockedChanged(bool value)
-    {
-        if (_isLoading)
-            return;
+    /// <summary>
+    ///     Re-reads the lock from the encrypted security settings. It is deliberately not a freely settable
+    ///     preference on this view model: the only way to change it is <see cref="SetLockedAsync" />, which goes
+    ///     through the password-gated boundary.
+    /// </summary>
+    public void RefreshLockState() => IsSettingsLocked = _securitySettings.Data.ProtectRawRandomSettings;
 
-        _configHandler.Data.MoreSettings.RawRandomSettingsLocked = value;
-        _configHandler.Save();
+    /// <summary>
+    ///     Turns the range/entropy lock on or off through <c>ISecurityService</c>. Unlocking counts as a protection
+    ///     downgrade, so it always needs a fresh password: neither the settings-window sudo nor the global timer
+    ///     can satisfy it, which is the whole point of locking something with a security password.
+    /// </summary>
+    public async Task<bool> SetLockedAsync(TopLevel? root, bool locked)
+    {
+        // Without protection there is nothing to verify against, and the lock is a plain preference: sending the user
+        // to a password prompt that cannot be satisfied would make the switch unusable on a fresh install.
+        if (!_securitySettings.Data.SecurityEnabled)
+        {
+            _securitySettings.Data.ProtectRawRandomSettings = locked;
+            _securitySettings.Save();
+            RefreshLockState();
+            StatusText = locked ? Resources.M_Locked : Resources.M_Unlocked;
+            return true;
+        }
+
+        if (root is null)
+            return false;
+
+        var updated = await _securityService
+            .UpdateSecuritySettingsAsync(root, () => _securitySettings.Data.ProtectRawRandomSettings = locked)
+            .ConfigureAwait(true);
+
+        RefreshLockState();
+        StatusText = updated
+            ? locked ? Resources.M_Locked : Resources.M_Unlocked
+            : Resources.M_UnlockCancelled;
+
+        return updated;
     }
 
     /// <summary>

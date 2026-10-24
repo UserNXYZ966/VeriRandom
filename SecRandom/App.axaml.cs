@@ -1216,6 +1216,7 @@ public partial class App : Application
                 services.AddHttpClient<INistBeaconClient, NistBeaconClient>(client =>
                     client.Timeout = TimeSpan.FromSeconds(5));
                 services.AddSingleton<ExternalEntropySourceClient>();
+                services.AddSingleton<RawNumberProofService>();
                 // random.org 的密钥是凭据：只进 data/config/randomorg/key.json，不进 settings.json 与任何备份。
                 services.AddSingleton<RandomOrgCredentialStore>();
                 services.AddSingleton<RandomOrgApiClient>();
@@ -1414,7 +1415,6 @@ public partial class App : Application
                 services.AddSingleton<RollCallPageViewModel>();
                 services.AddSingleton<QuickDrawPageViewModel>();
                 services.AddSingleton<LotteryPageViewModel>();
-                services.AddSingleton<RawRandomPageViewModel>();
                 services.AddTransient<RollCallHistoryViewModel>();
                 services.AddTransient<HomeSettingsPageViewModel>();
                 // "远程抽取"页的 ViewModel：**桌面/平板/手机三个宿主共用同一份**。它只跟协议有关，
@@ -1485,7 +1485,9 @@ public partial class App : Application
                     services.AddMainPage<HistoryPage>(Langs.Common.Resources.Feat_History);
 
                     // 「随机数」排在历史之后：远程抽取必须紧跟在抽奖之后（见上），因此新页不插进那两条之间。
+                    // ViewModel 也注册在这个桌面分支里：它依赖安全设置存储与控制面网关，两者都只在桌面宿主存在。
                     services.AddMainPage<RawRandomPage>(Langs.MainPages.RawRandom.Resources.C_PageTitle);
+                    services.AddSingleton<RawRandomPageViewModel>();
                 }
 
                 // 设置界面 Views

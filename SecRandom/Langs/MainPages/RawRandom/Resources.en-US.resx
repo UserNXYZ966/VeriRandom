@@ -27,4 +27,9 @@
   <data name="M_Ready" xml:space="preserve"><value>Set a range and entropy sources, then generate</value></data>
   <data name="M_ResultFormat" xml:space="preserve"><value>Result: {0}</value></data>
   <data name="M_VerifiableNotice" xml:space="preserve"><value>One verifiable source is selected: the number can be recomputed afterwards from its published pulse</value></data>
+  <data name="M_Locked" xml:space="preserve"><value>Locked: the range and entropy sources cannot be changed</value></data>
+  <data name="M_ProofSavedFormat" xml:space="preserve"><value>Proof written to {0}; the local recomputation check passed</value></data>
+  <data name="M_ProofVerifyFailed" xml:space="preserve"><value>The number was generated, but the proof failed its own check: do not use this record, and report it together with the log</value></data>
+  <data name="M_UnlockCancelled" xml:space="preserve"><value>Verification was not completed, so the lock stays on</value></data>
+  <data name="M_Unlocked" xml:space="preserve"><value>Unlocked: the range and entropy sources can be changed</value></data>
 </root>

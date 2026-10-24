@@ -1,9 +1,10 @@
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using SecRandom.Core.Attributes;
 using SecRandom.Core.Enums;
 using SecRandom.Core.Icons;
-using SecRandom.Langs.MainPages.RawRandom;
 using SecRandom.ViewModels.MainPages;
 
 namespace SecRandom.Views.MainPages;
@@ -19,9 +20,30 @@ public sealed partial class RawRandomPage : UserControl
         ViewModel = viewModel;
         DataContext = this;
         InitializeComponent();
+        Loaded += OnLoaded;
     }
 
     public RawRandomPageViewModel ViewModel { get; }
+
+    /// <summary>
+    ///     每次进页面都从加密的安全设置里重读锁定状态：另一个窗口可能刚改过它，页面缓存下来的旧值会让"已锁定"
+    ///     的界面允许编辑。
+    /// </summary>
+    private void OnLoaded(object? sender, RoutedEventArgs e) => ViewModel.RefreshLockState();
+
+    /// <summary>
+    ///     锁定/解锁都走 <c>ISecurityService</c> 的密码闸门。控件是 <c>OneWay</c> 绑定，点击后由这里决定最终状态：
+    ///     用户在密码框上取消时，必须把勾选框拨回真实状态，否则界面会显示"已解锁"而实际仍然锁着。
+    /// </summary>
+    private async void LockSettings_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not CheckBox box)
+            return;
+
+        var desired = box.IsChecked == true;
+        await ViewModel.SetLockedAsync(TopLevel.GetTopLevel(this), desired);
+        box.IsChecked = ViewModel.IsSettingsLocked;
+    }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
 }

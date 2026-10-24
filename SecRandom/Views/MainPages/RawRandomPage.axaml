@@ -74,9 +74,10 @@
                         <TextBlock Classes="hint"
                                    Text="{x:Static langs:Resources.M_LockedHint}"
                                    IsVisible="{Binding ViewModel.IsSettingsLocked}" />
-                        <!-- 锁定开关本身永远可点：否则打开锁定等于把自己锁在门外 -->
+                        <!-- 锁定开关本身永远可点：否则打开锁定等于把自己锁在门外；解锁要过安全密码 -->
                         <CheckBox Content="{x:Static langs:Resources.C_LockSettings}"
-                                  IsChecked="{Binding ViewModel.IsSettingsLocked}" />
+                                  IsChecked="{Binding ViewModel.IsSettingsLocked, Mode=OneWay}"
+                                  Click="LockSettings_OnClick" />
 
                         <Separator />
 

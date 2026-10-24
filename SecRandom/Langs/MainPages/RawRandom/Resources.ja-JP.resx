@@ -27,4 +27,9 @@
   <data name="M_Ready" xml:space="preserve"><value>範囲とエントロピー源を設定して生成してください</value></data>
   <data name="M_ResultFormat" xml:space="preserve"><value>結果：{0}</value></data>
   <data name="M_VerifiableNotice" xml:space="preserve"><value>検証可能な源を 1 つだけ選択しています：その源が公開したパルスから後で同じ数を再計算できます</value></data>
+  <data name="M_Locked" xml:space="preserve"><value>ロック中：範囲とエントロピー源は変更できません</value></data>
+  <data name="M_ProofSavedFormat" xml:space="preserve"><value>証明を {0} に書き込みました。ローカルでの再計算チェックに合格しています</value></data>
+  <data name="M_ProofVerifyFailed" xml:space="preserve"><value>乱数は生成されましたが証明の自己チェックに失敗しました。この記録は使わず、ログとともに報告してください</value></data>
+  <data name="M_UnlockCancelled" xml:space="preserve"><value>検証が完了しなかったため、ロックは維持されます</value></data>
+  <data name="M_Unlocked" xml:space="preserve"><value>ロックを解除しました。範囲とエントロピー源を変更できます</value></data>
 </root>

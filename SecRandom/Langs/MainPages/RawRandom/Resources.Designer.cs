@@ -43,6 +43,11 @@ public class Resources
     public static string C_SourceRandomOrg => ResourceManager.GetString(nameof(C_SourceRandomOrg), resourceCulture)!;
     public static string C_UpperBound => ResourceManager.GetString(nameof(C_UpperBound), resourceCulture)!;
     public static string M_GenerateFailedFormat => ResourceManager.GetString(nameof(M_GenerateFailedFormat), resourceCulture)!;
+    public static string M_Locked => ResourceManager.GetString(nameof(M_Locked), resourceCulture)!;
+    public static string M_ProofSavedFormat => ResourceManager.GetString(nameof(M_ProofSavedFormat), resourceCulture)!;
+    public static string M_ProofVerifyFailed => ResourceManager.GetString(nameof(M_ProofVerifyFailed), resourceCulture)!;
+    public static string M_UnlockCancelled => ResourceManager.GetString(nameof(M_UnlockCancelled), resourceCulture)!;
+    public static string M_Unlocked => ResourceManager.GetString(nameof(M_Unlocked), resourceCulture)!;
     public static string M_GeneratedNotVerifiable => ResourceManager.GetString(nameof(M_GeneratedNotVerifiable), resourceCulture)!;
     public static string M_GeneratedVerifiable => ResourceManager.GetString(nameof(M_GeneratedVerifiable), resourceCulture)!;
     public static string M_Generating => ResourceManager.GetString(nameof(M_Generating), resourceCulture)!;
