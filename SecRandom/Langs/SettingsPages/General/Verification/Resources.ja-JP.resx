@@ -80,6 +80,15 @@
   <data name="C_ProofReplay_Run" xml:space="preserve">
     <value>この抽選を再現する</value>
   </data>
+  <data name="M_ProofReplay_SignatureVerified" xml:space="preserve">
+    <value>エントロピー源の署名は内蔵証明書で再検証し、合格しました。ただし乱数が選別された可能性は残ります</value>
+  </data>
+  <data name="M_ProofReplay_SignatureVerifiedExpired" xml:space="preserve">
+    <value>エントロピー源の署名は再検証に合格しましたが、署名証明書は {0} に失効しているため、証明書チェーンの現在の有効性は確認できません。乱数が選別された可能性は残ります</value>
+  </data>
+  <data name="M_ProofReplay_SignatureInvalid" xml:space="preserve">
+    <value>エントロピー源の署名はローカル検証に失敗しました。記録されたデータと署名が一致しないため、この証明だけで結果を判断しないでください</value>
+  </data>
   <data name="M_ProofReplay_SignatureRecorded" xml:space="preserve">
     <value>このエントロピー源は署名を記録していますが、署名が対象とする生の応答は証明に含まれていないため、このウィンドウでは再検証しません。乱数が選別された可能性は残ります</value>
   </data>

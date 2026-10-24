@@ -456,16 +456,36 @@ public sealed partial class ProofReplayView : ViewBase
         }
 
         var report = _replayService.AssessTrust(node, trusted, ReadWitnessTime(), SelectedWitnessConfidence());
-        var note = SignatureNoteText(_replayService.SignatureNote(node));
+        var note = SignatureNoteText(node);
         TrustResultText.Text = note.Length == 0
             ? FormatTrustReport(report)
             : FormatTrustReport(report) + Environment.NewLine + note;
     }
 
     /// <summary>
-    ///     States what the proof does and does not establish about its entropy signature. Only the two cases the
-    ///     proof file can actually support are shown; anything else stays silent rather than implying a check.
+    ///     States what the proof establishes about its entropy signature, re-checking it locally when the signed
+    ///     payload was kept. A verdict is only claimed for checks this window actually ran.
     /// </summary>
+    private string SignatureNoteText(ProofReplayNode node)
+    {
+        var check = _replayService.VerifyRecordedSignature(node);
+        if (check is { IsValid: true })
+        {
+            return check.CertificateExpired
+                ? string.Format(
+                    CultureInfo.CurrentCulture,
+                    LR.M_ProofReplay_SignatureVerifiedExpired,
+                    check.CertificateNotAfter?.ToLocalTime().ToString("yyyy-MM-dd") ?? "?")
+                : LR.M_ProofReplay_SignatureVerified;
+        }
+
+        if (check is { IsValid: false })
+            return LR.M_ProofReplay_SignatureInvalid;
+
+        // No payload kept: fall back to what the file merely records.
+        return SignatureNoteText(_replayService.SignatureNote(node));
+    }
+
     private static string SignatureNoteText(ProofSignatureNote note) => note switch
     {
         ProofSignatureNote.SignatureRecorded => LR.M_ProofReplay_SignatureRecorded,

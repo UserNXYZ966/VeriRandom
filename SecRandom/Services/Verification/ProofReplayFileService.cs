@@ -288,6 +288,27 @@ public sealed class ProofReplayFileService(
     ///     chain's health for a foreign file would be answering a different question.
     /// </remarks>
     /// <summary>
+    ///     Re-checks the recorded signature when the payload it covers was kept; null when the proof holds no payload
+    ///     (every source but random.org's signed endpoint, and every node written before the field existed).
+    /// </summary>
+    /// <remarks>
+    ///     This is the only path that can legitimately say a signature is valid: it recomputes the check locally from
+    ///     material the file carries, instead of repeating whatever was claimed at fetch time.
+    /// </remarks>
+    public RandomOrgSignatureCheck? VerifyRecordedSignature(ProofReplayNode node)
+    {
+        if (!ownProofExporter.TryRead(OwnProofPaths.FromUpPath(node.Path), out var own) || own?.Beacon is null)
+            return null;
+
+        var beacon = own.Beacon;
+        if (string.IsNullOrWhiteSpace(beacon.SignatureValue) || string.IsNullOrWhiteSpace(beacon.SignaturePayload))
+            return null;
+
+        return IAppHost.TryGetService<RandomOrgSignatureVerifier>()?
+            .Verify(beacon.SignaturePayload, beacon.SignatureValue);
+    }
+
+    /// <summary>
     ///     Whether the node recorded a signed entropy source, so the window can state exactly what it has and has not
     ///     established.
     /// </summary>

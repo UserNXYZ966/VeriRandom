@@ -80,6 +80,15 @@ It prevents replacement of local draw code, random seeds, or result files during
   <data name="C_ProofReplay_Run" xml:space="preserve">
     <value>Replay this draw</value>
   </data>
+  <data name="M_ProofReplay_SignatureVerified" xml:space="preserve">
+    <value>The entropy signature was re-checked here against the embedded certificate and passed, but the numbers may still have been cherry-picked</value>
+  </data>
+  <data name="M_ProofReplay_SignatureVerifiedExpired" xml:space="preserve">
+    <value>The entropy signature was re-checked here and passed, but the signing certificate expired on {0}, so the chain's current validity cannot be confirmed; the numbers may still have been cherry-picked</value>
+  </data>
+  <data name="M_ProofReplay_SignatureInvalid" xml:space="preserve">
+    <value>The entropy signature failed the local check: the recorded data and the signature do not agree, so do not judge the result by this proof alone</value>
+  </data>
   <data name="M_ProofReplay_SignatureRecorded" xml:space="preserve">
     <value>This entropy source recorded a signature, but the proof does not keep the raw response it covers, so this window does not re-verify it; the numbers may still have been cherry-picked</value>
   </data>

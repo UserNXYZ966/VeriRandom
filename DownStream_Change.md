@@ -1101,3 +1101,32 @@
 
 ---
 
+## 42. 自有证明格式扩展：保存被签名的原始响应，重放时本地重验
+
+**格式变更**（只动 Own 节点，Up 证明一个字节未变）：`DrawProofBeacon` 新增两个**可选**字段
+
+```jsonc
+"signaturePayload": "<被签名的 random 对象 JSON 原文>",
+"signatureVerified": true        // 取数瞬间的结论，仅作声明
+```
+
+**向下兼容的三条**（这是别人担心的地方，逐条核过）：
+
+1. 旧版本读到未知字段：`System.Text.Json` 默认忽略 → 不报错
+2. **不进 `ComputeAttestedProofHash`**：该哈希覆盖固定字段表，服务端按同一张表重算；新字段进去会让每一次上报复核 `proof_hash_mismatch`
+3. **`OwnProof.Format` 仍是 `verirandom-own-proof/v1`**，没有升版 → 旧版本不会把它判成"不认识的格式"（升版才是会带来意外后果的那条路）
+
+**重放时的重验**：`ProofReplayFileService.VerifyRecordedSignature` 在 `signaturePayload` 存在时，用内置证书对原文重算 RSA/SHA-512/PKCS#1 校验；`signatureVerified` **不被信任**，只是声明。窗口据此显示：
+
+| 情况 | 文案键 |
+|---|---|
+| 重验通过、证书未过期 | `M_ProofReplay_SignatureVerified` — 熵源签名已复核通过，但结果仍可能被筛选 |
+| 重验通过、证书已过期（**当前就是这个**，2025-11-15） | `M_ProofReplay_SignatureVerifiedExpired` — 复核通过，但证书已于 {0} 过期，链的当前有效性无法确认 |
+| 重验失败 | `M_ProofReplay_SignatureInvalid` — 数据与签名不符，请勿仅凭这份证明认定结果 |
+| 有签名但无原文（旧证明） | `M_ProofReplay_SignatureRecorded` — 签名已记录，本窗口不重复验签 |
+| 无签名（未签名接口） | `M_ProofReplay_UnsignedSource` — 无法证明来源，也可能被挑选 |
+
+**代价**：证明文件每份增大约 1–2 KB，且 `hashedApiKey`（API Key 的 SHA-512，不可逆）会随原文进入文件——用户已确认接受这个取舍，换的是"签名有效性可以被第三方复核"。
+
+---
+
