@@ -161,6 +161,9 @@ public sealed class RandomOrgApiClient(IHttpClientFactory httpClientFactory, ILo
 
     private sealed record JsonRpcRequest(string Method, object Params, int Id)
     {
+        // JSON-RPC requires the member to be exactly "jsonrpc". The serializer's camelCase policy would emit
+        // "jsonRpc", which the service rejects outright with -32600 Invalid Request.
+        [System.Text.Json.Serialization.JsonPropertyName("jsonrpc")]
         public string JsonRpc { get; init; } = "2.0";
     }
 
