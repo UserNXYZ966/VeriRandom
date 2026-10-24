@@ -53,6 +53,9 @@ public partial class Resources
     public static string S_WindowOperations_D => Text(nameof(S_WindowOperations_D));
     public static string S_DrawOperations => Text(nameof(S_DrawOperations));
     public static string S_DrawOperations_D => Text(nameof(S_DrawOperations_D));
+    public static string S_RawRandomOperations => Text(nameof(S_RawRandomOperations));
+    public static string S_RawRandomOperations_D => Text(nameof(S_RawRandomOperations_D));
+    public static string C_RawRandomSettings => Text(nameof(C_RawRandomSettings));
     public static string C_ManageBindings => Text(nameof(C_ManageBindings));
     public static string C_SetPassword => Text(nameof(C_SetPassword));
     public static string C_ManagePassword => Text(nameof(C_ManagePassword));

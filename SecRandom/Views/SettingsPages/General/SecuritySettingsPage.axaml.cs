@@ -575,6 +575,10 @@ public partial class SecuritySettingsPage : UserControl, INotifyPropertyChanged
                 getValue = () => Settings.ProtectExit;
                 setValue = value => Settings.ProtectExit = value;
                 return true;
+            case nameof(SecuritySettingsConfig.ProtectRawRandomSettings):
+                getValue = () => Settings.ProtectRawRandomSettings;
+                setValue = value => Settings.ProtectRawRandomSettings = value;
+                return true;
             case nameof(SecuritySettingsConfig.ProtectRollCallStart):
                 getValue = () => Settings.ProtectRollCallStart;
                 setValue = value => Settings.ProtectRollCallStart = value;

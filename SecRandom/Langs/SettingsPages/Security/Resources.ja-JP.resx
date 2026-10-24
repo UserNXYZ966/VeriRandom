@@ -159,4 +159,7 @@
   <data name="S_SudoMode_Duration_D" xml:space="preserve"><value>認証成功後に再認証を省略する時間</value></data>
   <data name="S_SudoMode_Enabled" xml:space="preserve"><value>Sudo モードを有効にする</value></data>
   <data name="S_SudoMode_Enabled_D" xml:space="preserve"><value>オフにすると保護された操作は毎回再認証が必要になります</value></data>
+  <data name="S_RawRandomOperations" xml:space="preserve"><value>乱数</value></data>
+  <data name="S_RawRandomOperations_D" xml:space="preserve"><value>メイン画面の「乱数」ページで範囲とエントロピー源の選択をロックします。解除にはセキュリティパスワードが必要です</value></data>
+  <data name="C_RawRandomSettings" xml:space="preserve"><value>範囲とエントロピー源をロック</value></data>
 </root>

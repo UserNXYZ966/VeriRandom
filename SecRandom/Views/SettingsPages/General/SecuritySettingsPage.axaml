@@ -236,6 +236,21 @@
                           IsEnabled="{Binding CanEditProtectedOperations}" />
             </fa:FASettingsExpander>
 
+            <!--
+                「随机数」页的锁定单独成卡：它不是抽取操作，而是"这台机器允许在什么范围、用什么来源产生裸随机数"，
+                关掉它属于放宽防护，因此和上面每一项一样必须重新输密码
+            -->
+            <fa:FASettingsExpander x:Name="S_RawRandomOperations"
+                                   Header="{x:Static lsp:Resources.S_RawRandomOperations}"
+                                   Description="{x:Static lsp:Resources.S_RawRandomOperations_D}"
+                                   IconSource="{sr:FluentIconSource {sr:Fi NumberSymbolFilled}}">
+                <CheckBox Content="{x:Static lsp:Resources.C_RawRandomSettings}"
+                          IsChecked="{Binding Settings.ProtectRawRandomSettings, Mode=OneWay}"
+                          Tag="ProtectRawRandomSettings"
+                          IsCheckedChanged="SecurityOption_OnIsCheckedChanged"
+                          IsEnabled="{Binding CanEditProtectedOperations}" />
+            </fa:FASettingsExpander>
+
             <Separator Margin="0 12 0 4" />
             <sr:IconText x:Name="S_IntegritySection" Text="{x:Static lsp:Resources.S_IntegritySection}" Glyph="{sr:Fi LockShieldFilled}" Margin="0 0 0 4" />
 

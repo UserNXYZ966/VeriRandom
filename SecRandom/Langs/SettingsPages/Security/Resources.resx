@@ -188,4 +188,7 @@
   <data name="S_SudoMode_Duration_D" xml:space="preserve"><value>验证通过后的免验证时长</value></data>
   <data name="S_SudoMode_Enabled" xml:space="preserve"><value>启用 Sudo 模式</value></data>
   <data name="S_SudoMode_Enabled_D" xml:space="preserve"><value>关闭后每一次受保护操作都需要重新验证</value></data>
+  <data name="S_RawRandomOperations" xml:space="preserve"><value>随机数</value></data>
+  <data name="S_RawRandomOperations_D" xml:space="preserve"><value>锁定主界面「随机数」页的范围与熵源选择，关掉它需要重新输入安全密码</value></data>
+  <data name="C_RawRandomSettings" xml:space="preserve"><value>锁定范围与熵源</value></data>
 </root>

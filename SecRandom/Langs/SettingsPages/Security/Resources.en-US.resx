@@ -159,4 +159,7 @@
   <data name="S_SudoMode_Duration_D" xml:space="preserve"><value>How long verification is skipped after a successful one</value></data>
   <data name="S_SudoMode_Enabled" xml:space="preserve"><value>Enable Sudo Mode</value></data>
   <data name="S_SudoMode_Enabled_D" xml:space="preserve"><value>When off, every protected action asks for verification again</value></data>
+  <data name="S_RawRandomOperations" xml:space="preserve"><value>Random numbers</value></data>
+  <data name="S_RawRandomOperations_D" xml:space="preserve"><value>Lock the range and entropy-source choice on the main-window random-number page; clearing this needs the security password again</value></data>
+  <data name="C_RawRandomSettings" xml:space="preserve"><value>Lock range and entropy sources</value></data>
 </root>
