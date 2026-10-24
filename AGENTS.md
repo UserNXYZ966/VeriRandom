@@ -21,9 +21,9 @@ Maintenance contract:
 - `docs/project_rules.md` is the source of truth when a convention conflicts with this summary.
 -->
 
-**Last Update:** 2026-08-30
-**Last Submit:** 51f7f7fd
-**Last modified model:** MiMoCode
+**Last Update:** 2026-10-24
+**Last Submit:** 89862fd5
+**Last modified model:** DeepSeek V4.1 Flash 1017
 
 ## OVERVIEW
 SecRandom is a GPLv3 C#/.NET desktop app for fair random drawing in education scenarios. Stack: .NET solution, Avalonia + FluentAvalonia UI, Microsoft.Extensions.Hosting DI, xUnit v3 tests.

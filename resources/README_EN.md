@@ -48,6 +48,7 @@ VeriRandom is a fair random-selection application for classrooms, teams, events,
 ### Reviewable draw results
 
 - Every draw automatically saves a proof record file.
+- The random-number page generates a raw number inside the chosen range and immediately writes its own proof record; the value can be recomputed later from the source material that record stores.
 - You can choose to involve the server in and witness the draw process.
 - Draw results can be checked again through official channels.
 
