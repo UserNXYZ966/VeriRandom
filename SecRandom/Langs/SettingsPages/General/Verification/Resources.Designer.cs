@@ -136,6 +136,8 @@ public class Resources
     public static string C_ProofReplay_JumpLatest => Get(nameof(C_ProofReplay_JumpLatest));
     public static string C_ProofReplay_AssessAll => Get(nameof(C_ProofReplay_AssessAll));
     public static string M_ProofReplay_AssessedAll => Get(nameof(M_ProofReplay_AssessedAll));
+    public static string M_ProofReplay_SignatureRecorded => Get(nameof(M_ProofReplay_SignatureRecorded));
+    public static string M_ProofReplay_UnsignedSource => Get(nameof(M_ProofReplay_UnsignedSource));
     public static string C_ProofReplay_UseCurrentRoster => Get(nameof(C_ProofReplay_UseCurrentRoster));
     public static string C_ProofReplay_UseThisRoster => Get(nameof(C_ProofReplay_UseThisRoster));
     public static string C_ProofReplay_Cancel => Get(nameof(C_ProofReplay_Cancel));

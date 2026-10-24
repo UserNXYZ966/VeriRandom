@@ -1083,3 +1083,21 @@
 
 ---
 
+## 41. 离线验签落地 + 打分里如实说明签名状态
+
+**验签**：按官方 Signed API 文档——签名是 random.org 私钥对 **`random` 对象 JSON 原文的 SHA-512 摘要** 的签名，用 `https://api.random.org/server.crt` 的公钥校验。`RandomOrgSignatureVerifier` 因此对 `JsonElement.GetRawText()`（**原文，不重新序列化**）做 `RSA / SHA-512 / PKCS#1 v1.5` 校验；证书在桌面端是松散文件，故**在代码里钉死其 SHA-256**（`ovIWQvHn8gUpUyZfRtw9qoJhPRWsMo7OpGhu7bcgM1E=`），文件被替换只会得到"本构建无法担保"，而不是"伪造"。验签结论在取数时写入日志，**不因验签失败而让抽取失败**——在 canonical JSON 未经实测确认前，fail-closed 的风险高于收益。
+
+**一个必须记录的事实**：random.org 公布的验签证书 **已于 2025-11-15 过期**（`CN=RANDOM.ORG`，DigiCert EV RSA CA G2，RSA 4096）。RSA 数学不受影响，但"证书链当前有效"这句话不能说；`RandomOrgSignatureCheck.CertificateExpired` 单独上报。
+
+**打分窗口的说明**：`ProofReplayFileService.SignatureNote` 只回答"这份证明记录了什么"，并在打分结果下追加一句：
+
+| 证明里的情况 | 显示 |
+|---|---|
+| 有签名（random.org 签名接口） | 该熵源记录了签名，但证明里没有签名所覆盖的原始响应，因此本窗口不重复验签；随机数仍可能被挑选 |
+| 无签名（未签名接口 / 未配密钥） | 该熵源没有签名：无法证明随机数的来源，也可能被挑选 |
+| 其它来源（NIST / drand / 无信标） | 不追加任何一句 |
+
+**为什么不显示"签名有效"**：证明只保存了签名与序列号，**没有保存被签名的原始响应**，所以窗口无法重新推导该结论；把取数瞬间的结论写进界面会让"跨设备核验"变成一句无法复核的断言。要真正做到"签名有效"随证明走，需要给证明加字段保存原始响应——**那是下一步**，且会改变证明格式（§34 的字段扩容流程）。
+
+---
+

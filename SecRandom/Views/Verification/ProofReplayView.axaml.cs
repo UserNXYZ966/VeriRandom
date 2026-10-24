@@ -456,8 +456,22 @@ public sealed partial class ProofReplayView : ViewBase
         }
 
         var report = _replayService.AssessTrust(node, trusted, ReadWitnessTime(), SelectedWitnessConfidence());
-        TrustResultText.Text = FormatTrustReport(report);
+        var note = SignatureNoteText(_replayService.SignatureNote(node));
+        TrustResultText.Text = note.Length == 0
+            ? FormatTrustReport(report)
+            : FormatTrustReport(report) + Environment.NewLine + note;
     }
+
+    /// <summary>
+    ///     States what the proof does and does not establish about its entropy signature. Only the two cases the
+    ///     proof file can actually support are shown; anything else stays silent rather than implying a check.
+    /// </summary>
+    private static string SignatureNoteText(ProofSignatureNote note) => note switch
+    {
+        ProofSignatureNote.SignatureRecorded => LR.M_ProofReplay_SignatureRecorded,
+        ProofSignatureNote.UnsignedSource => LR.M_ProofReplay_UnsignedSource,
+        _ => string.Empty
+    };
 
     /// <summary>A remembered draw time only counts when both halves were supplied; otherwise the factor is absent.</summary>
     private DateTimeOffset? ReadWitnessTime()

@@ -158,6 +158,12 @@
   <data name="C_ProofReplay_Run" xml:space="preserve">
     <value>重放本次抽取</value>
   </data>
+  <data name="M_ProofReplay_SignatureRecorded" xml:space="preserve">
+    <value>该熵源记录了签名，但证明里没有签名所覆盖的原始响应，因此本窗口不重复验签；随机数仍可能被挑选</value>
+  </data>
+  <data name="M_ProofReplay_UnsignedSource" xml:space="preserve">
+    <value>该熵源没有签名（random.org 未签名接口）：无法证明随机数的来源，也可能被挑选</value>
+  </data>
   <data name="C_ProofReplay_AssessAll" xml:space="preserve">
     <value>批量评估</value>
   </data>

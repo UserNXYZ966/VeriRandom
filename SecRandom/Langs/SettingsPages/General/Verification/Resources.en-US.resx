@@ -80,6 +80,12 @@ It prevents replacement of local draw code, random seeds, or result files during
   <data name="C_ProofReplay_Run" xml:space="preserve">
     <value>Replay this draw</value>
   </data>
+  <data name="M_ProofReplay_SignatureRecorded" xml:space="preserve">
+    <value>This entropy source recorded a signature, but the proof does not keep the raw response it covers, so this window does not re-verify it; the numbers may still have been cherry-picked</value>
+  </data>
+  <data name="M_ProofReplay_UnsignedSource" xml:space="preserve">
+    <value>This entropy source has no signature (random.org's unsigned endpoint): its origin cannot be proven and the numbers may have been cherry-picked</value>
+  </data>
   <data name="C_ProofReplay_AssessAll" xml:space="preserve">
     <value>Assess all</value>
   </data>

@@ -58,6 +58,19 @@ public sealed record ProofRosterSnapshot(
     string Name,
     IReadOnlyList<ProofRosterMember> Members);
 
+/// <summary>What the window can honestly say about a proof's entropy signature.</summary>
+public enum ProofSignatureNote
+{
+    /// <summary>No signed entropy source was recorded (NIST, drand, or no beacon at all).</summary>
+    NoSignedSource,
+
+    /// <summary>The source publishes no signature (the unsigned random.org endpoint).</summary>
+    UnsignedSource,
+
+    /// <summary>A signature was recorded, but verifying it again needs material the proof does not hold.</summary>
+    SignatureRecorded
+}
+
 /// <summary>Result of replaying one node, including the roster check when a roster was supplied.</summary>
 public sealed record ProofReplayOutcome(
     ProofReplayReport Report,
@@ -274,6 +287,26 @@ public sealed class ProofReplayFileService(
     ///     folder handed over from another machine cannot prove that it holds the whole chain: reporting the local
     ///     chain's health for a foreign file would be answering a different question.
     /// </remarks>
+    /// <summary>
+    ///     Whether the node recorded a signed entropy source, so the window can state exactly what it has and has not
+    ///     established.
+    /// </summary>
+    /// <remarks>
+    ///     Verification is deliberately not repeated here: the signature covers the raw JSON of random.org's response,
+    ///     which the proof does not keep, so re-checking would need material that is gone. A claim we cannot re-derive
+    ///     must not be shown as "verified" — the proof keeps the signature itself precisely so a third party holding
+    ///     that response can check it.
+    /// </remarks>
+    public ProofSignatureNote SignatureNote(ProofReplayNode node)
+    {
+        if (!ownProofExporter.TryRead(OwnProofPaths.FromUpPath(node.Path), out var own) || own?.Beacon is null)
+            return ProofSignatureNote.NoSignedSource;
+
+        return string.IsNullOrWhiteSpace(own.Beacon.SignatureValue)
+            ? ProofSignatureNote.UnsignedSource
+            : ProofSignatureNote.SignatureRecorded;
+    }
+
     private bool IsChainIntactFor(string path, DrawProof proof)
     {
         var isLocalProof = proofExporter.EnumerateProofPaths()
