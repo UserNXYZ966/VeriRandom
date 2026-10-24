@@ -173,4 +173,9 @@ It prevents replacement of local draw code, random seeds, or result files during
   <data name="M_ProofReplay_RecordedIds" xml:space="preserve">
     <value>Recorded recordId prefixes: {0} (choose a roster to show names)</value>
   </data>
+  <data name="C_VerifyRawProofs" xml:space="preserve"><value>Verify random-number records</value></data>
+  <data name="M_RawProofsUnavailable" xml:space="preserve"><value>The random-number record service is not available here</value></data>
+  <data name="M_RawProofsNone" xml:space="preserve"><value>No random-number records yet</value></data>
+  <data name="M_RawProofsAllValidFormat" xml:space="preserve"><value>All {0} random-number records recomputed successfully; chain head index {1}</value></data>
+  <data name="M_RawProofsSomeInvalidFormat" xml:space="preserve"><value>{0} record(s) failed recomputation, do not use them: {1}</value></data>
 </root>

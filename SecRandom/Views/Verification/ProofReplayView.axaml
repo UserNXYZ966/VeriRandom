@@ -139,6 +139,17 @@
                             Click="AssessAll_OnClick" />
                     <TextBlock x:Name="TrustResultText" FontSize="12" TextWrapping="Wrap"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+                    <!--
+                        裸随机数记录不在抽签链上（它们没有候选池，也就没有可以重放的抽签内核），因此单独校验：
+                        按记录自带的熵源原文重算种子与结果，再复核它自己的链哈希
+                    -->
+                    <Button x:Name="VerifyRawProofsButton"
+                            HorizontalAlignment="Stretch"
+                            Content="{x:Static lv:Resources.C_VerifyRawProofs}"
+                            Click="VerifyRawProofs_OnClick" />
+                    <TextBlock x:Name="VerifyRawProofsText" FontSize="12" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                 </StackPanel>
             </ScrollViewer>
         </Border>

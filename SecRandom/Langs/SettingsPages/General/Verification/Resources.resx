@@ -251,4 +251,9 @@
   <data name="M_ProofReplay_RecordedIds" xml:space="preserve">
     <value>记录的 recordId 前 8 位：{0}（选择一份名单即可显示姓名）</value>
   </data>
+  <data name="C_VerifyRawProofs" xml:space="preserve"><value>校验随机数记录</value></data>
+  <data name="M_RawProofsUnavailable" xml:space="preserve"><value>本机没有可用的随机数记录服务</value></data>
+  <data name="M_RawProofsNone" xml:space="preserve"><value>还没有随机数记录</value></data>
+  <data name="M_RawProofsAllValidFormat" xml:space="preserve"><value>{0} 条随机数记录全部重算通过，链尾序号 {1}</value></data>
+  <data name="M_RawProofsSomeInvalidFormat" xml:space="preserve"><value>{0} 条记录未能重算通过，请勿使用这些记录：{1}</value></data>
 </root>

@@ -173,4 +173,9 @@
   <data name="M_ProofReplay_RecordedIds" xml:space="preserve">
     <value>記録された recordId の先頭 8 文字：{0}（名簿を選ぶと氏名を表示します）</value>
   </data>
+  <data name="C_VerifyRawProofs" xml:space="preserve"><value>乱数記録を検証</value></data>
+  <data name="M_RawProofsUnavailable" xml:space="preserve"><value>この環境では乱数記録サービスを利用できません</value></data>
+  <data name="M_RawProofsNone" xml:space="preserve"><value>乱数記録はまだありません</value></data>
+  <data name="M_RawProofsAllValidFormat" xml:space="preserve"><value>乱数記録 {0} 件はすべて再計算に成功しました。チェーン末尾の番号は {1} です</value></data>
+  <data name="M_RawProofsSomeInvalidFormat" xml:space="preserve"><value>{0} 件の記録が再計算に失敗しました。これらの記録は使わないでください：{1}</value></data>
 </root>

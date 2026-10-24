@@ -97,6 +97,30 @@ public sealed partial class ProofReplayView : ViewBase
         LoadNodes();
     }
 
+    /// <summary>
+    ///     校验 `data/proofs/raw` 下的全部裸随机数记录：用每条记录自带的熵源原文重算种子与结果，并复核它自己那条链。
+    ///     这些记录**不**出现在上面的链画布上——它们没有候选池，抽签内核无法重放，混进去只会被当成"链有缺口"。
+    /// </summary>
+    private void VerifyRawProofs_OnClick(object? sender, RoutedEventArgs e)
+    {
+        var service = Core.Abstraction.IAppHost.TryGetService<RawNumberProofService>();
+        if (service is null)
+        {
+            VerifyRawProofsText.Text = LR.M_RawProofsUnavailable;
+            return;
+        }
+
+        var result = service.VerifyAll();
+        VerifyRawProofsText.Text = result.Total == 0
+            ? LR.M_RawProofsNone
+            : result.FailedFileNames.Count == 0
+                ? string.Format(LR.M_RawProofsAllValidFormat, result.Total, result.LastIndex)
+                : string.Format(
+                    LR.M_RawProofsSomeInvalidFormat,
+                    result.FailedFileNames.Count,
+                    string.Join("、", result.FailedFileNames));
+    }
+
     private void RenderChain()
     {
         ChainCanvas.Children.Clear();

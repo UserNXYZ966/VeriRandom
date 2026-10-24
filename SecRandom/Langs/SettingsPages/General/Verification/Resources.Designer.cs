@@ -138,6 +138,11 @@ public class Resources
     public static string M_ProofReplay_AssessedAll => Get(nameof(M_ProofReplay_AssessedAll));
     public static string M_ProofReplay_SignatureRecorded => Get(nameof(M_ProofReplay_SignatureRecorded));
     public static string M_ProofReplay_SignatureVerified => Get(nameof(M_ProofReplay_SignatureVerified));
+    public static string C_VerifyRawProofs => Get(nameof(C_VerifyRawProofs));
+    public static string M_RawProofsAllValidFormat => Get(nameof(M_RawProofsAllValidFormat));
+    public static string M_RawProofsNone => Get(nameof(M_RawProofsNone));
+    public static string M_RawProofsSomeInvalidFormat => Get(nameof(M_RawProofsSomeInvalidFormat));
+    public static string M_RawProofsUnavailable => Get(nameof(M_RawProofsUnavailable));
     public static string M_ProofReplay_SignatureVerifiedExpired => Get(nameof(M_ProofReplay_SignatureVerifiedExpired));
     public static string M_ProofReplay_SignatureInvalid => Get(nameof(M_ProofReplay_SignatureInvalid));
     public static string M_ProofReplay_UnsignedSource => Get(nameof(M_ProofReplay_UnsignedSource));

@@ -117,6 +117,58 @@ public sealed class RawNumberProofService(ILogger<RawNumberProofService> logger)
         return new RawNumberVerification(seedMatches, valueMatches, chainMatches);
     }
 
+    /// <summary>
+    ///     Every raw-number record on disk, ordered by chain position. They live in their own folder and their own
+    ///     chain, because a raw number has no candidate pool for the draw replay to work on.
+    /// </summary>
+    public IReadOnlyList<RawNumberProofFile> LoadAll()
+    {
+        var directory = ProofDirectory;
+        if (!Directory.Exists(directory))
+            return [];
+
+        var files = new List<RawNumberProofFile>();
+        foreach (var path in Directory.EnumerateFiles(directory, "*.rawproof.json", SearchOption.AllDirectories))
+        {
+            try
+            {
+                var proof = JsonSerializer.Deserialize<RawNumberProof>(
+                    File.ReadAllText(path),
+                    SerializerOptions);
+                if (proof is not null)
+                    files.Add(new RawNumberProofFile(path, proof));
+            }
+            catch (Exception exception) when (exception is IOException or JsonException)
+            {
+                logger.LogWarning(exception, "无法读取裸随机数记录 {Path}", path);
+            }
+        }
+
+        return files.OrderBy(file => file.Proof.Index).ToArray();
+    }
+
+    /// <summary>
+    ///     Recomputes every record from its own contents. This is the strongest check a raw-number record admits:
+    ///     it proves the file still describes the number it claims, not that the entropy source behaved.
+    /// </summary>
+    public RawNumberBatchVerification VerifyAll()
+    {
+        var files = LoadAll();
+        var failed = new List<string>();
+
+        foreach (var file in files)
+            if (!Verify(file.Proof).Succeeded)
+            {
+                failed.Add(Path.GetFileName(file.Path));
+                logger.LogWarning("裸随机数记录自校验失败：{Path}", file.Path);
+            }
+
+        return new RawNumberBatchVerification(
+            files.Count,
+            failed,
+            files.Count == 0 ? 0 : files[^1].Proof.Index);
+    }
+
     private static string ProofDirectory => Utils.GetFilePath("proofs", "raw");
 
     private static async Task<RawNumberChainHead> LoadHeadAsync(CancellationToken cancellationToken)
@@ -174,3 +226,12 @@ public sealed record RawNumberVerification(bool SeedMatches, bool ValueMatches, 
 {
     public bool Succeeded => SeedMatches && ValueMatches && ChainHashMatches;
 }
+
+/// <summary>One record as read back from disk.</summary>
+public sealed record RawNumberProofFile(string Path, RawNumberProof Proof);
+
+/// <summary>Result of checking every record on disk at once.</summary>
+public sealed record RawNumberBatchVerification(
+    int Total,
+    IReadOnlyList<string> FailedFileNames,
+    long LastIndex);
