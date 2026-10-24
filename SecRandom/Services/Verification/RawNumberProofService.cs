@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using SecRandom.Core.Models.Verification;
 using SecRandom.Core.Services.Draw;
 using SecRandom.Core.Services.Verification;
+using SecRandom.Shared;
 
 namespace SecRandom.Services.Verification;
 
