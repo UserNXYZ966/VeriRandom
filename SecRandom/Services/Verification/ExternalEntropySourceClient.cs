@@ -43,7 +43,7 @@ public sealed class ExternalEntropySourceClient(
     IHttpClientFactory httpClientFactory,
     ILogger<ExternalEntropySourceClient> logger)
 {
-    /// <summary>random.org answers one decimal byte per line; 32 of them make the 512-bit output a pulse carries.</summary>
+    /// <summary>random.org answers one decimal byte per line; 32 of them make the 256-bit output a source publishes.</summary>
     private const int RandomOrgByteCount = 32;
 
     /// <summary>Fetches are on the draw's critical path, so they get a short bound instead of the client default.</summary>
@@ -91,7 +91,7 @@ public sealed class ExternalEntropySourceClient(
                     || string.IsNullOrWhiteSpace(round.Signature))
                     throw new InvalidDataException("drand round did not include a round number, randomness and signature.");
 
-                // Validates the 512-bit output shape up front; a malformed round must never reach the seed derivation.
+                // Validates the published output shape up front; a malformed round must never reach the seed derivation.
                 _ = BeaconSeedDerivation.DecodeOutputValue(round.Randomness);
 
                 var publishedAt = BeaconSourceCatalog.RoundTime(source, round.Round)

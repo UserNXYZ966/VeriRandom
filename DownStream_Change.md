@@ -956,7 +956,7 @@
 
 - `BeaconPulse.PulseIndex = 0`、`ChainIndex = 0`、`TimeStamp = 取回时刻`，种子唯一性来自**取回的字节本身**
 - `ReserveAsync` 对它**跳过 `BeaconSequencePolicy` 与 `beacon-state.json` 落盘**：没有公开时间轴就没有"缺口"语义，硬套序号反而会因为"同索引不同输出"被判成冲突而**让每次抽取都失败**
-- 输出固定 32 字节（64 位十六进制），与 `BeaconSeedDerivation.DecodeOutputValue` 要求的 512 位等宽，因此仍然走同一条种子派生
+- 输出固定 32 字节（64 个十六进制字符），走同一条种子派生——但这**要求 `DecodeOutputValue` 同时接受 256 位与 512 位**，见 §36
 
 **两处实现细节**：
 
@@ -986,6 +986,28 @@
 | 预取整体失败 | 调度器记一条 `Debug`；抽取侧仍会以 `BeaconEntropyException` 报出具体来源与主机 |
 
 **结论**：成功路径不产生任何日志行；失败路径每分钟最多一条 Debug（Release 不写），真正需要用户看到的那次失败由抽取本身报。
+
+---
+
+## 36. 修复：drand / random.org 一律被判"输出值形状不合法"（以及换源后的序号锚点）
+
+**现场证据**（设置页「拉取一次」，来源=drand，全局代理已开）：
+
+```
+熵源 drand 的所有前端都取回失败：Beacon output value must be 128 hexadecimal characters.
+```
+
+请求本身是通的——**是我这边的形状校验写死了 NIST 的宽度**：`BeaconSeedDerivation.DecodeOutputValue` 只接受 128 个十六进制字符（NIST 的 512 位），而 drand 的 `randomness` 是 256 位（64 字符），random.org 取的 32 字节同样只有 64 字符。两个来源在**进入派生之前**就被拒，所以既完不成抽取、也写不出证明——与网络无关。
+
+**修法一：`DecodeOutputValue` 接受 256 位与 512 位两种宽度**。派生的 `material` 本来就按 `output.Length` 分配缓冲，因此接受更窄的输出不改变任何 NIST 派生的种子（逐字节一致），也不需要新的 DerivationId；其他长度仍被拒绝，绝不补齐或截断。`BeaconPulse` 的文档同步改成"宽度随来源"。
+
+**修法二：序号锚点按来源区分**（这是换源后立刻会踩的第二个坑）。`beacon-state.json` 原来只记 `PulseIndex/ChainIndex/OutputValue/Sequence`，但 NIST 数的是**脉冲**（现场值 1 996 869），drand 数的是**轮次**（四千万量级）：切到 drand 会通过，切回 NIST 则必然触发 `PulseIndexRegression` 而**拒绝每一次抽取**。现在状态文档带 `SourceId`：
+
+- 记录的来源与当前来源不一致 → 视为**没有锚点**，从新来源自己的时间线重新开始（这不是"回退"，是两个不相干的时间线）
+- 旧文档没有 `SourceId`（当时只可能是 NIST）→ 按 NIST 解释，升级后 NIST 的序号连续性不受影响
+- 进程内缓存也按来源失效，切源后立刻重读
+
+**仍然存在的边界**：`BeaconPulsePeriodPolicy.Match` 的"周期预设"以时间戳周期为基准，drand 的 3 秒周期与它并不比 60 秒更自然；这条只影响**事后核对/可信度评分**的档位，不影响抽取与证明写入。
 
 ---
 

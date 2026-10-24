@@ -37,6 +37,7 @@ public sealed class BeaconEntropyProvider(
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     private bool _stateLoaded;
+    private string? _stateSourceId;
     private BeaconSequenceState? _state;
 
     /// <summary>
@@ -189,12 +190,12 @@ public sealed class BeaconEntropyProvider(
             var sequence = 0L;
             if (source.Kind != BeaconSourceKind.RandomOrgEntropy)
             {
-                var state = LoadState();
+                var state = LoadState(source);
                 var resolved = BeaconSequencePolicy.ResolveNext(state, pulse, out var failure);
                 if (failure != BeaconSequenceFailure.None)
                     throw new BeaconEntropyException(DescribeFailure(failure, pulse, state));
 
-                SaveState(new BeaconSequenceState(pulse.PulseIndex, pulse.ChainIndex, pulse.OutputValue, resolved));
+                SaveState(source, new BeaconSequenceState(pulse.PulseIndex, pulse.ChainIndex, pulse.OutputValue, resolved));
                 sequence = resolved;
             }
 
@@ -242,12 +243,13 @@ public sealed class BeaconEntropyProvider(
 
     private static string StateFilePath => Utils.GetFilePath("proofs", StateFileName);
 
-    private BeaconSequenceState? LoadState()
+    private BeaconSequenceState? LoadState(BeaconSource source)
     {
-        if (_stateLoaded)
+        if (_stateLoaded && string.Equals(_stateSourceId, source.Id, StringComparison.Ordinal))
             return _state;
 
         _stateLoaded = true;
+        _stateSourceId = source.Id;
         var path = StateFilePath;
         if (!File.Exists(path))
             return _state = null;
@@ -255,7 +257,16 @@ public sealed class BeaconEntropyProvider(
         try
         {
             var document = JsonSerializer.Deserialize<BeaconSequenceStateDocument>(File.ReadAllText(path), JsonOptions);
+            // The anchor belongs to one source's timeline. NIST counts pulses and drand counts rounds, so switching
+            // sources legitimately moves the index in either direction; keeping the old anchor would read that as a
+            // regression and refuse every draw until the new source outgrew the old number. Documents written before
+            // the source was recorded can only have come from NIST, which is what they are treated as.
+            var recordedSource = string.IsNullOrEmpty(document?.SourceId)
+                ? BeaconSourceCatalog.NistBeaconV2.Id
+                : document!.SourceId;
+
             _state = document is null || document.PulseIndex < 0 || document.Sequence < 0
+                     || !string.Equals(recordedSource, source.Id, StringComparison.Ordinal)
                 ? null
                 : new BeaconSequenceState(document.PulseIndex, document.ChainIndex, document.OutputValue ?? string.Empty,
                     document.Sequence);
@@ -271,13 +282,14 @@ public sealed class BeaconEntropyProvider(
         return _state;
     }
 
-    private void SaveState(BeaconSequenceState state)
+    private void SaveState(BeaconSource source, BeaconSequenceState state)
     {
         var path = StateFilePath;
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var temporaryPath = path + $".{Guid.NewGuid():N}.tmp";
         var document = new BeaconSequenceStateDocument
         {
+            SourceId = source.Id,
             PulseIndex = state.PulseIndex,
             ChainIndex = state.ChainIndex,
             OutputValue = state.OutputValue,
@@ -286,11 +298,15 @@ public sealed class BeaconEntropyProvider(
         File.WriteAllText(temporaryPath, JsonSerializer.Serialize(document, JsonOptions));
         File.Move(temporaryPath, path, true);
         _state = state;
+        _stateSourceId = source.Id;
         _stateLoaded = true;
     }
 
     private sealed class BeaconSequenceStateDocument
     {
+        /// <summary>Which source's timeline the anchor belongs to; empty in documents written before it existed.</summary>
+        public string? SourceId { get; set; }
+
         public long PulseIndex { get; set; } = -1;
         public long ChainIndex { get; set; }
         public string OutputValue { get; set; } = string.Empty;
