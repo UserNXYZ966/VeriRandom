@@ -310,6 +310,102 @@ public partial class VerificationSettingsPage : UserControl
         ConfigHandler.Save();
     }
 
+    /// <summary>True while random.org is the selected source, which is when its key setup row makes sense.</summary>
+    public bool IsRandomOrgSourceSelected =>
+        string.Equals(ResolvedBeaconSource().Id, BeaconSourceCatalog.RandomOrg.Id, StringComparison.Ordinal);
+
+    /// <summary>
+    ///     Walks the user through random.org's own sign-up and API-key pages.
+    /// </summary>
+    /// <remarks>
+    ///     The account, the application form and the key are all handled in the user's real browser: registering an
+    ///     account on their behalf (or collecting their mailbox confirmation) would mean acting as them against
+    ///     another service's terms, and an embedded browser would put their session inside this process. This dialog
+    ///     only opens the right pages, shows the usage text to paste, and stores what they bring back.
+    /// </remarks>
+    private async void ConfigureRandomOrgSigning_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (TopLevel.GetTopLevel(this) is not { } topLevel)
+            return;
+
+        var guide = CreateDialogText(LR.M_RandomOrgSetupGuide);
+        var accountButton = new Button { Content = LR.C_RandomOrgOpenAccount };
+        accountButton.Click += (_, _) => ExternalLauncher.TryOpenUri("https://accounts.random.org/");
+
+        var apiKeyButton = new Button { Content = LR.C_RandomOrgOpenApiKeys };
+        apiKeyButton.Click += (_, _) => ExternalLauncher.TryOpenUri("https://api.random.org/dashboard");
+
+        var keyBox = new TextBox
+        {
+            Watermark = LR.C_RandomOrgKeyPlaceholder,
+            PasswordChar = '•',
+            Text = IAppHost.GetService<RandomOrgCredentialStore>().Load() ?? string.Empty
+        };
+
+        var status = CreateDialogText(string.Empty, topMargin: 4);
+        var validateButton = new Button { Content = LR.C_RandomOrgValidateKey };
+        validateButton.Click += async (_, _) =>
+        {
+            validateButton.IsEnabled = false;
+            status.Text = LR.M_BeaconFetching;
+            try
+            {
+                var usage = await IAppHost.GetService<RandomOrgApiClient>()
+                    .GetUsageAsync(keyBox.Text ?? string.Empty, CancellationToken.None);
+                status.Text = string.Format(CultureInfo.CurrentCulture, LR.M_RandomOrgKeyValid,
+                    usage.BitsLeft, usage.RequestsLeft);
+            }
+            catch (Exception exception)
+            {
+                status.Text = string.Format(CultureInfo.CurrentCulture, LR.M_RandomOrgKeyInvalid, exception.Message);
+            }
+            finally
+            {
+                validateButton.IsEnabled = true;
+            }
+        };
+
+        var content = new StackPanel
+        {
+            Spacing = 8,
+            Children =
+            {
+                guide,
+                new StackPanel
+                {
+                    Orientation = Avalonia.Layout.Orientation.Horizontal,
+                    Spacing = 8,
+                    Children = { accountButton, apiKeyButton }
+                },
+                keyBox,
+                validateButton,
+                status
+            }
+        };
+
+        var dialog = new FAContentDialog
+        {
+            Title = LR.C_RandomOrgSetup,
+            Content = content,
+            PrimaryButtonText = LR.C_RandomOrgSaveKey,
+            CloseButtonText = LR.C_ProofReplay_Cancel,
+            DefaultButton = FAContentDialogButton.Close
+        };
+
+        if (await dialog.ShowAsync(topLevel) != FAContentDialogResult.Primary)
+            return;
+
+        try
+        {
+            IAppHost.GetService<RandomOrgCredentialStore>().Save(keyBox.Text ?? string.Empty);
+            BeaconStatusText.Text = LR.M_RandomOrgKeySaved;
+        }
+        catch (Exception exception)
+        {
+            BeaconStatusText.Text = exception.Message;
+        }
+    }
+
     public string BeaconEndpoint
     {
         get => ConfigHandler.Data.General.Verification.BeaconEndpoint;

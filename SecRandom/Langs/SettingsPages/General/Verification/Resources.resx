@@ -89,6 +89,36 @@
   <data name="M_BeaconFetching" xml:space="preserve"><value>正在拉取…</value></data>
   <data name="M_BeaconFetched" xml:space="preserve"><value>脉冲 {0}，链 {1}，时间 {2}</value></data>
   <data name="M_BeaconFailed" xml:space="preserve"><value>拉取失败，请检查网络或地址</value></data>
+  <data name="C_RandomOrgSetup" xml:space="preserve">
+    <value>接入 random.org 签名</value>
+  </data>
+  <data name="M_RandomOrgSetupGuide" xml:space="preserve">
+    <value>先在浏览器里注册或登录 random.org 账户，再在 API 面板申请一个密钥，然后把它粘贴到这里；程序不会替你注册、也不会读取你的邮箱，账户与密钥始终由你自己申请</value>
+  </data>
+  <data name="C_RandomOrgOpenAccount" xml:space="preserve">
+    <value>打开账户页面</value>
+  </data>
+  <data name="C_RandomOrgOpenApiKeys" xml:space="preserve">
+    <value>打开 API 面板</value>
+  </data>
+  <data name="C_RandomOrgKeyPlaceholder" xml:space="preserve">
+    <value>粘贴 API Key</value>
+  </data>
+  <data name="C_RandomOrgValidateKey" xml:space="preserve">
+    <value>验证密钥</value>
+  </data>
+  <data name="C_RandomOrgSaveKey" xml:space="preserve">
+    <value>保存密钥</value>
+  </data>
+  <data name="M_RandomOrgKeyValid" xml:space="preserve">
+    <value>密钥有效：剩余 {0} 位，剩余 {1} 次请求</value>
+  </data>
+  <data name="M_RandomOrgKeyInvalid" xml:space="preserve">
+    <value>密钥校验失败：{0}</value>
+  </data>
+  <data name="M_RandomOrgKeySaved" xml:space="preserve">
+    <value>已保存 random.org API 密钥</value>
+  </data>
   <data name="S_BeaconSource" xml:space="preserve">
     <value>随机源</value>
   </data>

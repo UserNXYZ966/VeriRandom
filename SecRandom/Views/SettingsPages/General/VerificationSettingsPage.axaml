@@ -70,14 +70,20 @@
                                     Description="{x:Static lv:Resources.S_BeaconSource_D}"
                                     IconSource="{sr:FluentIconSource {sr:Fi GlobeFilled}}">
                 <fa:FASettingsExpander.Footer>
-                    <ComboBox x:Name="BeaconSourceCombo"
-                              MinWidth="240"
-                              SelectedIndex="{Binding SelectedBeaconSourceIndex, Mode=OneWay}"
-                              SelectionChanged="BeaconSource_OnSelectionChanged">
-                        <ComboBoxItem Content="{x:Static lv:Resources.O_BeaconSource_Nist}" />
-                        <ComboBoxItem Content="{x:Static lv:Resources.O_BeaconSource_Drand}" />
-                        <ComboBoxItem Content="{x:Static lv:Resources.O_BeaconSource_RandomOrg}" />
-                    </ComboBox>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <ComboBox x:Name="BeaconSourceCombo"
+                                  MinWidth="240"
+                                  SelectedIndex="{Binding SelectedBeaconSourceIndex, Mode=OneWay}"
+                                  SelectionChanged="BeaconSource_OnSelectionChanged">
+                            <ComboBoxItem Content="{x:Static lv:Resources.O_BeaconSource_Nist}" />
+                            <ComboBoxItem Content="{x:Static lv:Resources.O_BeaconSource_Drand}" />
+                            <ComboBoxItem Content="{x:Static lv:Resources.O_BeaconSource_RandomOrg}" />
+                        </ComboBox>
+                        <Button x:Name="RandomOrgSetupButton"
+                                Content="{x:Static lv:Resources.C_RandomOrgSetup}"
+                                IsVisible="{Binding IsRandomOrgSourceSelected}"
+                                Click="ConfigureRandomOrgSigning_OnClick" />
+                    </StackPanel>
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
 

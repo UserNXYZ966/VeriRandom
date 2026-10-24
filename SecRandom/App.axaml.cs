@@ -1216,6 +1216,9 @@ public partial class App : Application
                 services.AddHttpClient<INistBeaconClient, NistBeaconClient>(client =>
                     client.Timeout = TimeSpan.FromSeconds(5));
                 services.AddSingleton<ExternalEntropySourceClient>();
+                // random.org 的密钥是凭据：只进 data/config/randomorg/key.json，不进 settings.json 与任何备份。
+                services.AddSingleton<RandomOrgCredentialStore>();
+                services.AddSingleton<RandomOrgApiClient>();
                 services.AddSingleton<BeaconEntropyProvider>();                services.AddSingleton<DrawProofAttestationService>();
                 services.AddHostedService(serviceProvider =>
                     serviceProvider.GetRequiredService<DrawProofAttestationService>());

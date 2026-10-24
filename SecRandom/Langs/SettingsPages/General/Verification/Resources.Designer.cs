@@ -118,6 +118,16 @@ public class Resources
     public static string O_BeaconSource_Nist => Get(nameof(O_BeaconSource_Nist));
     public static string O_BeaconSource_Drand => Get(nameof(O_BeaconSource_Drand));
     public static string O_BeaconSource_RandomOrg => Get(nameof(O_BeaconSource_RandomOrg));
+    public static string C_RandomOrgSetup => Get(nameof(C_RandomOrgSetup));
+    public static string M_RandomOrgSetupGuide => Get(nameof(M_RandomOrgSetupGuide));
+    public static string C_RandomOrgOpenAccount => Get(nameof(C_RandomOrgOpenAccount));
+    public static string C_RandomOrgOpenApiKeys => Get(nameof(C_RandomOrgOpenApiKeys));
+    public static string C_RandomOrgKeyPlaceholder => Get(nameof(C_RandomOrgKeyPlaceholder));
+    public static string C_RandomOrgValidateKey => Get(nameof(C_RandomOrgValidateKey));
+    public static string C_RandomOrgSaveKey => Get(nameof(C_RandomOrgSaveKey));
+    public static string M_RandomOrgKeyValid => Get(nameof(M_RandomOrgKeyValid));
+    public static string M_RandomOrgKeyInvalid => Get(nameof(M_RandomOrgKeyInvalid));
+    public static string M_RandomOrgKeySaved => Get(nameof(M_RandomOrgKeySaved));
     public static string S_BeaconAutoPrefetch => Get(nameof(S_BeaconAutoPrefetch));
     public static string C_OpenProofReplay => Get(nameof(C_OpenProofReplay));
     public static string S_ProofReplay => Get(nameof(S_ProofReplay));

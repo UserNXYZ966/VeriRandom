@@ -1048,3 +1048,21 @@
 
 ---
 
+## 39. random.org 签名接入的第一步：由用户自己申请，程序只引导与存放
+
+**为什么不自动化申请**：random.org 的密钥是**网页表单 + 邮箱确认**，没有公开的发放接口；代用户提交注册信息、代收邮件，等于替用户对第三方作出同意，而且它的封禁是按 **IP/UA** 做的——一旦被判定为自动化注册，坏的不仅是签名接口，**连现在免密钥的 `integers` 抽取也会一起失效**。因此自动化止步于"打开正确的页面"。
+
+**为什么不用嵌入式 WebView**：Avalonia 11 没有内置 WebView，三端各要一份运行时（WebView2 / WKWebView / WebKitGTK），而且登录会话与密码会落在本进程内，与"凭据只进私有目录"的边界冲突。用**系统默认浏览器**（`IExternalLauncher`）既零新增依赖，也与 SECTL 登录的既有做法一致。
+
+**落地形态**：抽取验证页 · 信标组的「随机源」旁边，选中 random.org 时出现「接入 random.org 签名」按钮，`FAContentDialog` 里三步：
+
+1. 「打开账户页面」→ `https://accounts.random.org/`（注册 / 登录）
+2. 「打开 API 面板」→ `https://api.random.org/dashboard`（申请密钥）
+3. 粘贴密钥 → 「验证密钥」真的调用一次 JSON-RPC `getUsage`，把剩余额度显示出来（失败时把 random.org 的原话带出来），确认后「保存密钥」
+
+**凭据边界**：`RandomOrgCredentialStore` 只写 `data/config/randomorg/key.json`（原子替换），**不进 `settings.json`、不进备份、不进日志、不进 Android provider**；日志只记长度不记内容。密钥被拒（random.org 的 `-10xx` 错误段）单独抛 `RandomOrgKeyRejectedException`，不会被当成"网络问题"糊弄过去。
+
+**边界（本步还没做的）**：抽取仍走**未签名**的 `integers` 接口——保存的密钥目前只用于校验与额度查询。把 `signedInteger` 接进抽取路径、验签并把「熵源签名有效，但结果仍可能被筛选」这句话接进打分结果，是下一步。
+
+---
+
