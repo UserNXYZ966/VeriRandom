@@ -12,6 +12,7 @@ using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
+using SecRandom.Core.Abstraction;
 using SecRandom.Core.Models.Verification;
 using SecRandom.Core.Services.Config;
 using SecRandom.Core.Services.Draw;
@@ -51,7 +52,6 @@ public partial class RawRandomPageViewModel : ViewModelBase
     private readonly ExternalEntropySourceClient _entropySourceClient;
     private readonly RawNumberProofService _proofService;
     private readonly MainConfigHandler _configHandler;
-    private readonly SecuritySettingsStore _securitySettings;
     private readonly ISecurityService _securityService;
     private readonly ILogger<RawRandomPageViewModel> _logger;
 
@@ -65,14 +65,12 @@ public partial class RawRandomPageViewModel : ViewModelBase
         MainConfigHandler configHandler,
         ExternalEntropySourceClient entropySourceClient,
         RawNumberProofService proofService,
-        SecuritySettingsStore securitySettings,
         ISecurityService securityService,
         ILogger<RawRandomPageViewModel> logger) : base(configHandler)
     {
         _configHandler = configHandler;
         _entropySourceClient = entropySourceClient;
         _proofService = proofService;
-        _securitySettings = securitySettings;
         _securityService = securityService;
         _logger = logger;
 
@@ -275,11 +273,19 @@ public partial class RawRandomPageViewModel : ViewModelBase
     partial void OnUpperBoundTextChanged(string value) => PersistRange();
 
     /// <summary>
+    ///     The security settings live in the encrypted store, which is <c>internal</c> to this assembly — so it is
+    ///     resolved here rather than injected: exposing it in a public constructor makes this view model's
+    ///     accessibility inconsistent (CS0051), and the store cannot be widened just for this page.
+    /// </summary>
+    private static SecuritySettingsStore? SecuritySettings => IAppHost.TryGetService<SecuritySettingsStore>();
+
+    /// <summary>
     ///     Re-reads the lock from the encrypted security settings. It is deliberately not a freely settable
     ///     preference on this view model: the only way to change it is <see cref="SetLockedAsync" />, which goes
     ///     through the password-gated boundary.
     /// </summary>
-    public void RefreshLockState() => IsSettingsLocked = _securitySettings.Data.ProtectRawRandomSettings;
+    public void RefreshLockState() =>
+        IsSettingsLocked = SecuritySettings?.Data.ProtectRawRandomSettings ?? false;
 
     /// <summary>
     ///     Turns the range/entropy lock on or off through <c>ISecurityService</c>. Unlocking counts as a protection
@@ -288,12 +294,15 @@ public partial class RawRandomPageViewModel : ViewModelBase
     /// </summary>
     public async Task<bool> SetLockedAsync(TopLevel? root, bool locked)
     {
+        if (SecuritySettings is not { } store)
+            return false;
+
         // Without protection there is nothing to verify against, and the lock is a plain preference: sending the user
         // to a password prompt that cannot be satisfied would make the switch unusable on a fresh install.
-        if (!_securitySettings.Data.SecurityEnabled)
+        if (!store.Data.SecurityEnabled)
         {
-            _securitySettings.Data.ProtectRawRandomSettings = locked;
-            _securitySettings.Save();
+            store.Data.ProtectRawRandomSettings = locked;
+            store.Save();
             RefreshLockState();
             StatusText = locked ? Resources.M_Locked : Resources.M_Unlocked;
             return true;
@@ -303,7 +312,7 @@ public partial class RawRandomPageViewModel : ViewModelBase
             return false;
 
         var updated = await _securityService
-            .UpdateSecuritySettingsAsync(root, () => _securitySettings.Data.ProtectRawRandomSettings = locked)
+            .UpdateSecuritySettingsAsync(root, () => store.Data.ProtectRawRandomSettings = locked)
             .ConfigureAwait(true);
 
         RefreshLockState();
