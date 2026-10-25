@@ -41,7 +41,7 @@ public sealed partial class ResultMiniWindow : Window
     private bool _allowClose;
 
     /// <summary>The touch contact currently moving or resizing the window; null when nothing is being dragged.</summary>
-    private Pointer? _manualPointer;
+    private IPointer? _manualPointer;
 
     private WindowEdge _manualEdge;
     private bool _isManuallyResizing;
