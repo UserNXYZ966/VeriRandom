@@ -13,6 +13,8 @@ using SecRandom.Core.Attributes;
 using SecRandom.Core.Icons;
 using SecRandom.Core.Models.SlideTrigger;
 using SR = SecRandom.Langs.SettingsPages.SlideTrigger.Resources;
+using SecRandom.Langs.SettingsPages.SlideTrigger;
+using SecRandom.Platforms.Abstractions;
 using SecRandom.Services.SlideTrigger;
 
 namespace SecRandom.Views.SettingsPages.SlideTrigger;
@@ -37,11 +39,13 @@ public sealed partial class SlideTriggerSettingsPage : UserControl
 {
     private readonly SlideTriggerStore _store;
     private readonly SlideTriggerMarkerImageService _images;
+    private readonly SlideTriggerScreenDecoder _decoder;
 
     public SlideTriggerSettingsPage()
     {
         _store = IAppHost.GetService<SlideTriggerStore>();
         _images = IAppHost.GetService<SlideTriggerMarkerImageService>();
+        _decoder = IAppHost.GetService<SlideTriggerScreenDecoder>();
 
         DataContext = this;
         InitializeComponent();
@@ -126,6 +130,39 @@ public sealed partial class SlideTriggerSettingsPage : UserControl
         SessionText.Text = string.Format(SR.M_SessionFormat, _store.StartNewSession());
         StatusText.Text = SR.M_SessionRolled;
         RefreshLibrary();
+    }
+
+    /// <summary>
+    ///     One-shot check of what is on screen right now. This is the only way to answer "does this work on my
+    ///     projector" without waiting for a lesson, and it is deliberately manual: nothing samples the screen in the
+    ///     background yet, so pressing this button is the only moment a frame is read.
+    /// </summary>
+    private void Probe_OnClick(object? sender, RoutedEventArgs e)
+    {
+        var probe = IAppHost.TryGetService<IPlatformServiceRoot>()?.ScreenProbe;
+        if (probe is not { IsSupported: true })
+        {
+            StatusText.Text = SR.M_ProbeUnsupported;
+            return;
+        }
+
+        if (!probe.IsPresentationForeground())
+        {
+            StatusText.Text = SR.M_ProbeNotPresentation;
+            return;
+        }
+
+        var frame = probe.CaptureForegroundDisplay();
+        if (frame is null)
+        {
+            StatusText.Text = SR.M_ProbeUnsupported;
+            return;
+        }
+
+        var decoded = _decoder.Decode(frame);
+        StatusText.Text = decoded is { Success: true, Parameters: { } parameters }
+            ? string.Format(SR.M_ProbeFoundFormat, DescribeParameters(parameters))
+            : SR.M_ProbeNotFound;
     }
 
     private void RefreshLibrary()
@@ -237,11 +274,24 @@ public sealed partial class SlideTriggerSettingsPage : UserControl
 
     private string Describe(SlideTriggerDefinition definition)
     {
-        var parameters = definition.Parameters;
+        var parts = new List<string> { DescribeParameters(definition.Parameters) };
+
+        if (definition.ExpiresAt is { } expiry)
+            parts.Add(string.Format(SR.M_ExpiresFormat, expiry.ToLocalTime().ToString("yyyy-MM-dd")));
+
+        return string.Join(" · ", parts);
+    }
+
+    /// <summary>
+    ///     The parameter half of a marker's summary, shared with the probe result so "what did it read off the screen"
+    ///     and "what is in my library" cannot drift apart in wording.
+    /// </summary>
+    private string DescribeParameters(SlideTriggerParameters parameters)
+    {
         var parts = new List<string>
         {
-            $"{parameters.Count} 人",
-            parameters.StudentListName is null ? SR.M_ActiveList : parameters.StudentListName,
+            string.Format(SR.M_CountFormat, parameters.Count),
+            parameters.StudentListName ?? SR.M_ActiveList,
             parameters.Timing == SlideTriggerTiming.AfterInputs
                 ? string.Format(SR.M_TimingInputsFormat, parameters.TriggerAfterInputs)
                 : string.Format(SR.M_TimingDelayFormat, parameters.DelaySeconds)
@@ -252,9 +302,6 @@ public sealed partial class SlideTriggerSettingsPage : UserControl
 
         if (parameters.IgnoreHistoryWeights)
             parts.Add(SR.M_IgnoreWeightsBadge);
-
-        if (definition.ExpiresAt is { } expiry)
-            parts.Add(string.Format(SR.M_ExpiresFormat, expiry.ToLocalTime().ToString("yyyy-MM-dd")));
 
         return string.Join(" · ", parts);
     }
