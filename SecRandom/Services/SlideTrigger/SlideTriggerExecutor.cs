@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using SecRandom.Core.Enums.Configs;
 using SecRandom.Core.Models.SlideTrigger;
 using SecRandom.Services.Draw;
 using SecRandom.Services.Linkage;
