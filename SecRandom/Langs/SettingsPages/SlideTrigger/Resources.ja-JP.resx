@@ -53,6 +53,8 @@
   <data name="M_IgnoreWeightsBadge" xml:space="preserve"><value>重みなし</value></data>
   <data name="M_ExpiresFormat" xml:space="preserve"><value>{0} に失効</value></data>
   <data name="C_ProbeNow" xml:space="preserve"><value>現在の画面を確認</value></data>
+  <data name="C_Watcher" xml:space="preserve"><value>教材マーカーを自動認識（試験的）</value></data>
+  <data name="M_WatcherHint" xml:space="preserve"><value>キー操作の後に一度だけ投影中の画面を読み取り、静止中は読みません。画面も文字も本機の外に出ません</value></data>
   <data name="M_CountFormat" xml:space="preserve"><value>{0} 人</value></data>
   <data name="M_ProbeFoundFormat" xml:space="preserve"><value>マーカーを検出：{0}</value></data>
   <data name="M_ProbeNotFound" xml:space="preserve"><value>画面に教材マーカーが見つかりません</value></data>

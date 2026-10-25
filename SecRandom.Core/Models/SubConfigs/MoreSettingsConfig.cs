@@ -74,4 +74,8 @@ public partial class MoreSettingsConfig : ObservableObject
     // and a remembered position from a disconnected monitor would put it off-screen.
     [ObservableProperty] private double _resultMiniWindowWidth = 360;
     [ObservableProperty] private double _resultMiniWindowHeight = 320;
+
+    // Courseware-marker auto-detection. Off by default: it reads the projected screen, so it must be a deliberate
+    // choice rather than something a fresh install starts doing.
+    [ObservableProperty] private bool _slideTriggerWatcherEnabled;
 }

@@ -91,6 +91,14 @@
                         <TextBlock x:Name="SessionText" VerticalAlignment="Center" FontSize="12" Opacity="0.75" />
                     </StackPanel>
 
+                    <!--
+                        自动识别默认关闭：它会读取投放画面，必须是用户明确打开的行为，而不是新装即生效
+                    -->
+                    <CheckBox x:Name="WatcherBox" Content="{x:Static langs:Resources.C_Watcher}"
+                              IsCheckedChanged="Watcher_OnChanged" />
+                    <TextBlock Text="{x:Static langs:Resources.M_WatcherHint}" FontSize="12"
+                               Opacity="0.7" TextWrapping="Wrap" />
+
                     <TextBlock x:Name="EmptyHint" Text="{x:Static langs:Resources.M_NoMarkers}"
                                FontSize="12" Opacity="0.7" TextWrapping="Wrap" />
 

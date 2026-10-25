@@ -63,6 +63,8 @@ public class Resources
     public static string C_Delete => ResourceManager.GetString(nameof(C_Delete), resourceCulture)!;
     public static string C_PngFileType => ResourceManager.GetString(nameof(C_PngFileType), resourceCulture)!;
     public static string C_ProbeNow => ResourceManager.GetString(nameof(C_ProbeNow), resourceCulture)!;
+    public static string C_Watcher => ResourceManager.GetString(nameof(C_Watcher), resourceCulture)!;
+    public static string M_WatcherHint => ResourceManager.GetString(nameof(M_WatcherHint), resourceCulture)!;
     public static string M_CountFormat => ResourceManager.GetString(nameof(M_CountFormat), resourceCulture)!;
     public static string M_ProbeFoundFormat => ResourceManager.GetString(nameof(M_ProbeFoundFormat), resourceCulture)!;
     public static string M_ProbeNotFound => ResourceManager.GetString(nameof(M_ProbeNotFound), resourceCulture)!;

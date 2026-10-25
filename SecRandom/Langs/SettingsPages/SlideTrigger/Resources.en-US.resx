@@ -53,6 +53,8 @@
   <data name="M_IgnoreWeightsBadge" xml:space="preserve"><value>unweighted</value></data>
   <data name="M_ExpiresFormat" xml:space="preserve"><value>expires {0}</value></data>
   <data name="C_ProbeNow" xml:space="preserve"><value>Check current screen</value></data>
+  <data name="C_Watcher" xml:space="preserve"><value>Detect courseware markers automatically (experimental)</value></data>
+  <data name="M_WatcherHint" xml:space="preserve"><value>Reads the projected screen once after a key press and never while idle; no frame or text leaves this machine</value></data>
   <data name="M_CountFormat" xml:space="preserve"><value>{0} person(s)</value></data>
   <data name="M_ProbeFoundFormat" xml:space="preserve"><value>Marker found: {0}</value></data>
   <data name="M_ProbeNotFound" xml:space="preserve"><value>No courseware marker was found on screen</value></data>

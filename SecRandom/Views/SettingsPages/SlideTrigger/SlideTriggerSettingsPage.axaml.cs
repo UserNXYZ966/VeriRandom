@@ -40,17 +40,62 @@ public sealed partial class SlideTriggerSettingsPage : UserControl
     private readonly SlideTriggerStore _store;
     private readonly SlideTriggerMarkerImageService _images;
     private readonly SlideTriggerScreenDecoder _decoder;
+    private readonly SlideTriggerWatcher? _watcher;
 
     public SlideTriggerSettingsPage()
     {
         _store = IAppHost.GetService<SlideTriggerStore>();
         _images = IAppHost.GetService<SlideTriggerMarkerImageService>();
         _decoder = IAppHost.GetService<SlideTriggerScreenDecoder>();
+        _watcher = IAppHost.TryGetService<SlideTriggerWatcher>();
 
         DataContext = this;
         InitializeComponent();
         RefreshLibrary();
+
+        if (_watcher is { IsSupported: true })
+        {
+            WatcherBox.IsChecked = _watcher.IsEnabled;
+            _watcher.MarkerDetected += OnMarkerDetected;
+            DetachedFromVisualTree += OnDetachedFromVisualTree;
+        }
+        else
+        {
+            WatcherBox.IsEnabled = false;
+            WatcherBox.IsChecked = false;
+        }
     }
+
+    private void Watcher_OnChanged(object? sender, RoutedEventArgs e)
+    {
+        if (_watcher is null)
+            return;
+
+        _watcher.IsEnabled = WatcherBox.IsChecked == true;
+    }
+
+    /// <summary>
+    ///     The page is transient but the watcher is a host singleton, so an unsubscribed handler would keep this page
+    ///     alive for the rest of the process — and one of those pages per visit.
+    /// </summary>
+    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        if (_watcher is not null)
+            _watcher.MarkerDetected -= OnMarkerDetected;
+    }
+
+    /// <summary>
+    ///     Detection happens on a pool thread, so reporting it has to hop back to the UI thread.
+    /// </summary>
+    private void OnMarkerDetected(object? sender, SlideTriggerDetection detection) =>
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            StatusText.Text = detection.AlreadyUsedThisSession || detection.Payload.Parameters is null
+                ? SR.M_UsedThisSession
+                : string.Format(SR.M_ProbeFoundFormat, DescribeParameters(detection.Payload.Parameters));
+
+            RefreshLibrary();
+        });
 
     // ---------------------------------------------------------------- generation
 
