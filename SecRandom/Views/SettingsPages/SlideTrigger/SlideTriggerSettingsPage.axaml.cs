@@ -12,7 +12,7 @@ using SecRandom.Core.Abstraction;
 using SecRandom.Core.Attributes;
 using SecRandom.Core.Icons;
 using SecRandom.Core.Models.SlideTrigger;
-using SecRandom.Langs.SettingsPages.SlideTrigger;
+using SR = SecRandom.Langs.SettingsPages.SlideTrigger.Resources;
 using SecRandom.Services.SlideTrigger;
 
 namespace SecRandom.Views.SettingsPages.SlideTrigger;
@@ -66,7 +66,7 @@ public sealed partial class SlideTriggerSettingsPage : UserControl
         }
         catch (ArgumentException exception)
         {
-            StatusText.Text = string.Format(Resources.M_GenerateFailedFormat, exception.Message);
+            StatusText.Text = string.Format(SR.M_GenerateFailedFormat, exception.Message);
             return;
         }
 
@@ -76,19 +76,19 @@ public sealed partial class SlideTriggerSettingsPage : UserControl
                 TopLevel.GetTopLevel(this),
                 definition.MarkerText,
                 SafeFileName(definition.Name),
-                Resources.S_ExportPicker,
-                Resources.C_PngFileType);
+                SR.S_ExportPicker,
+                SR.C_PngFileType);
 
             StatusText.Text = path is null
-                ? Resources.M_ExportCancelled
-                : string.Format(Resources.M_SavedFormat, path);
+                ? SR.M_ExportCancelled
+                : string.Format(SR.M_SavedFormat, path);
         }
         else
         {
             var copied = await _images.TryCopyToClipboardAsync(TopLevel.GetTopLevel(this), definition.MarkerText);
             StatusText.Text = copied
-                ? string.Format(Resources.M_CopiedFormat, Describe(definition))
-                : Resources.M_ClipboardUnavailable;
+                ? string.Format(SR.M_CopiedFormat, Describe(definition))
+                : SR.M_ClipboardUnavailable;
         }
 
         RefreshLibrary();
@@ -123,14 +123,14 @@ public sealed partial class SlideTriggerSettingsPage : UserControl
 
     private void NewSession_OnClick(object? sender, RoutedEventArgs e)
     {
-        SessionText.Text = string.Format(Resources.M_SessionFormat, _store.StartNewSession());
-        StatusText.Text = Resources.M_SessionRolled;
+        SessionText.Text = string.Format(SR.M_SessionFormat, _store.StartNewSession());
+        StatusText.Text = SR.M_SessionRolled;
         RefreshLibrary();
     }
 
     private void RefreshLibrary()
     {
-        SessionText.Text = string.Format(Resources.M_SessionFormat, _store.Session);
+        SessionText.Text = string.Format(SR.M_SessionFormat, _store.Session);
         EmptyHint.IsVisible = _store.Triggers.Count == 0;
 
         MarkerRows.Children.Clear();
@@ -150,19 +150,19 @@ public sealed partial class SlideTriggerSettingsPage : UserControl
         var used = definition.IsConsumedIn(_store.Session);
         var state = new TextBlock
         {
-            Text = used ? Resources.M_UsedThisSession : Resources.M_NotUsed,
+            Text = used ? SR.M_UsedThisSession : SR.M_NotUsed,
             FontSize = 12,
             Opacity = 0.75,
             VerticalAlignment = VerticalAlignment.Center
         };
 
-        var copy = new Button { Content = Resources.C_Copy, Tag = definition };
+        var copy = new Button { Content = SR.C_Copy, Tag = definition };
         copy.Click += CopyMarker_OnClick;
 
-        var export = new Button { Content = Resources.C_SaveAs, Tag = definition };
+        var export = new Button { Content = SR.C_SaveAs, Tag = definition };
         export.Click += ExportMarker_OnClick;
 
-        var remove = new Button { Content = Resources.C_Delete, Tag = definition };
+        var remove = new Button { Content = SR.C_Delete, Tag = definition };
         remove.Click += DeleteMarker_OnClick;
 
         var actions = new StackPanel
@@ -203,8 +203,8 @@ public sealed partial class SlideTriggerSettingsPage : UserControl
 
         var copied = await _images.TryCopyToClipboardAsync(TopLevel.GetTopLevel(this), definition.MarkerText);
         StatusText.Text = copied
-            ? string.Format(Resources.M_CopiedFormat, Describe(definition))
-            : Resources.M_ClipboardUnavailable;
+            ? string.Format(SR.M_CopiedFormat, Describe(definition))
+            : SR.M_ClipboardUnavailable;
     }
 
     private async void ExportMarker_OnClick(object? sender, RoutedEventArgs e)
@@ -216,11 +216,11 @@ public sealed partial class SlideTriggerSettingsPage : UserControl
             TopLevel.GetTopLevel(this),
             definition.MarkerText,
             SafeFileName(definition.Name),
-            Resources.S_ExportPicker,
-            Resources.C_PngFileType);
+            SR.S_ExportPicker,
+            SR.C_PngFileType);
 
         if (path is not null)
-            StatusText.Text = string.Format(Resources.M_SavedFormat, path);
+            StatusText.Text = string.Format(SR.M_SavedFormat, path);
     }
 
     private void DeleteMarker_OnClick(object? sender, RoutedEventArgs e)
@@ -229,7 +229,7 @@ public sealed partial class SlideTriggerSettingsPage : UserControl
             return;
 
         _store.Remove(definition.Id);
-        StatusText.Text = string.Format(Resources.M_DeletedFormat, definition.Name);
+        StatusText.Text = string.Format(SR.M_DeletedFormat, definition.Name);
         RefreshLibrary();
     }
 
@@ -241,20 +241,20 @@ public sealed partial class SlideTriggerSettingsPage : UserControl
         var parts = new List<string>
         {
             $"{parameters.Count} 人",
-            parameters.StudentListName is null ? Resources.M_ActiveList : parameters.StudentListName,
+            parameters.StudentListName is null ? SR.M_ActiveList : parameters.StudentListName,
             parameters.Timing == SlideTriggerTiming.AfterInputs
-                ? string.Format(Resources.M_TimingInputsFormat, parameters.TriggerAfterInputs)
-                : string.Format(Resources.M_TimingDelayFormat, parameters.DelaySeconds)
+                ? string.Format(SR.M_TimingInputsFormat, parameters.TriggerAfterInputs)
+                : string.Format(SR.M_TimingDelayFormat, parameters.DelaySeconds)
         };
 
         if (parameters.AllowRepeat)
-            parts.Add(Resources.M_AllowRepeatBadge);
+            parts.Add(SR.M_AllowRepeatBadge);
 
         if (parameters.IgnoreHistoryWeights)
-            parts.Add(Resources.M_IgnoreWeightsBadge);
+            parts.Add(SR.M_IgnoreWeightsBadge);
 
         if (definition.ExpiresAt is { } expiry)
-            parts.Add(string.Format(Resources.M_ExpiresFormat, expiry.ToLocalTime().ToString("yyyy-MM-dd")));
+            parts.Add(string.Format(SR.M_ExpiresFormat, expiry.ToLocalTime().ToString("yyyy-MM-dd")));
 
         return string.Join(" · ", parts);
     }
