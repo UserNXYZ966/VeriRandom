@@ -179,9 +179,15 @@ public sealed partial class SlideTriggerSettingsPage : UserControl
 
     /// <summary>
     ///     One-shot check of what is on screen right now. This is the only way to answer "does this work on my
-    ///     projector" without waiting for a lesson, and it is deliberately manual: nothing samples the screen in the
-    ///     background yet, so pressing this button is the only moment a frame is read.
+    ///     projector" without waiting for a lesson, and it is deliberately manual: it reads one frame per display, only
+    ///     when the button is pressed.
     /// </summary>
+    /// <remarks>
+    ///     Deliberately <em>not</em> gated on "a presentation is in front". Clicking this button puts our own settings
+    ///     window in front, so that gate — which exists to stop background sampling — would make the button refuse every
+    ///     single time. Every display is read once instead, which is also the honest answer on a dual-screen classroom
+    ///     machine where the deck is full-screen on the other monitor.
+    /// </remarks>
     private void Probe_OnClick(object? sender, RoutedEventArgs e)
     {
         var probe = IAppHost.TryGetService<IPlatformServiceRoot>()?.ScreenProbe;
@@ -191,23 +197,24 @@ public sealed partial class SlideTriggerSettingsPage : UserControl
             return;
         }
 
-        if (!probe.IsPresentationForeground())
-        {
-            StatusText.Text = SR.M_ProbeNotPresentation;
-            return;
-        }
-
-        var frame = probe.CaptureForegroundDisplay();
-        if (frame is null)
+        var frames = probe.CaptureAllDisplays();
+        if (frames.Count == 0)
         {
             StatusText.Text = SR.M_ProbeUnsupported;
             return;
         }
 
-        var decoded = _decoder.Decode(frame);
-        StatusText.Text = decoded is { Success: true, Parameters: { } parameters }
-            ? string.Format(SR.M_ProbeFoundFormat, DescribeParameters(parameters))
-            : SR.M_ProbeNotFound;
+        foreach (var frame in frames)
+        {
+            var decoded = _decoder.Decode(frame);
+            if (decoded is not { Success: true, Parameters: { } parameters })
+                continue;
+
+            StatusText.Text = string.Format(SR.M_ProbeFoundFormat, DescribeParameters(parameters));
+            return;
+        }
+
+        StatusText.Text = SR.M_ProbeNotFound;
     }
 
     private void RefreshLibrary()

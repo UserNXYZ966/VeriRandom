@@ -17,4 +17,6 @@ public sealed class UnsupportedSlideTriggerScreenProbe : ISlideTriggerScreenProb
     public bool IsPresentationForeground() => false;
 
     public CapturedScreen? CaptureForegroundDisplay() => null;
+
+    public IReadOnlyList<CapturedScreen> CaptureAllDisplays() => [];
 }

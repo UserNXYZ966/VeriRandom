@@ -66,6 +66,48 @@ public sealed class WindowsSlideTriggerScreenProbe : ISlideTriggerScreenProbe
         if (!TryGetMonitorRect(window, out var rect))
             return null;
 
+        return CaptureRect(rect);
+    }
+
+    /// <summary>
+    ///     Reads every display once. Used by the manual check, where the foreground display is the monitor showing our
+    ///     own settings window rather than the projector.
+    /// </summary>
+    public IReadOnlyList<CapturedScreen> CaptureAllDisplays()
+    {
+        // A delegate receiving `ref` parameters cannot be a lambda, so the rects are collected through this instance
+        // method. The manual check is a single foreground action, never called concurrently.
+        _monitorRects = [];
+        try
+        {
+            EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, CollectMonitorRect, IntPtr.Zero);
+
+            if (_monitorRects.Count == 0 && TryGetMonitorRect(GetForegroundWindow(), out var fallback))
+                _monitorRects.Add(fallback);
+
+            var frames = new List<CapturedScreen>(_monitorRects.Count);
+            foreach (var rect in _monitorRects)
+                if (CaptureRect(rect) is { } frame)
+                    frames.Add(frame);
+
+            return frames;
+        }
+        finally
+        {
+            _monitorRects = null;
+        }
+    }
+
+    private List<Rect>? _monitorRects;
+
+    private bool CollectMonitorRect(IntPtr hMonitor, IntPtr hdcMonitor, ref Rect monitorRect, IntPtr data)
+    {
+        _monitorRects?.Add(monitorRect);
+        return true;
+    }
+
+    private static CapturedScreen? CaptureRect(Rect rect)
+    {
         var width = rect.Right - rect.Left;
         var height = rect.Bottom - rect.Top;
         if (width <= 0 || height <= 0)
@@ -231,6 +273,12 @@ public sealed class WindowsSlideTriggerScreenProbe : ISlideTriggerScreenProbe
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MonitorInfo lpmi);
+
+    private delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdcMonitor, ref Rect lprcMonitor, IntPtr dwData);
+
+    [DllImport("user32.dll")]
+    private static extern bool EnumDisplayMonitors(
+        IntPtr hdc, IntPtr lprcClip, MonitorEnumProc lpfnEnum, IntPtr dwData);
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetDC(IntPtr hWnd);

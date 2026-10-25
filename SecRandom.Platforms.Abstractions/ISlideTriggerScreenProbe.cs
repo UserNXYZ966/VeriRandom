@@ -54,4 +54,18 @@ public interface ISlideTriggerScreenProbe
     ///     unusable.
     /// </summary>
     CapturedScreen? CaptureForegroundDisplay();
+
+    /// <summary>
+    ///     Captures every display once, in system order. Empty when unsupported or nothing could be read.
+    /// </summary>
+    /// <remarks>
+    ///     Separate from <see cref="CaptureForegroundDisplay" /> because the two callers have different questions. The
+    ///     automatic watcher only ever cares about the slideshow in front, so it asks for that one display and the
+    ///     presentation gate keeps it from reading anything else. A <em>manual</em> check is the opposite situation: the
+    ///     teacher has just clicked a button in this application, so the foreground is our own settings window — asking
+    ///     for the foreground display there either refuses outright or captures the wrong monitor on a dual-screen
+    ///     classroom machine. Reading each display in turn answers "is there a marker on any of my screens", which is
+    ///     what the button actually means.
+    /// </remarks>
+    IReadOnlyList<CapturedScreen> CaptureAllDisplays();
 }
