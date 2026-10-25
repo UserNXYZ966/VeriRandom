@@ -1205,6 +1205,9 @@ public partial class App : Application
                     services.AddSingleton<ResultMiniWindowService>();
                     services.AddSingleton<SlideTriggerStore>();
                     services.AddSingleton<SlideTriggerMarkerImageService>();
+                    // 课件标记页也注册在这个桌面分支：它依赖上面两个服务，而手机宿主没有它们，也没有可抓拍的放映画面
+                    services.AddSettingsPage<Views.SettingsPages.SlideTrigger.SlideTriggerSettingsPage>(
+                        Langs.SettingsPages.SlideTrigger.Resources.Page_Title);
                 }
                 services.AddSingleton<ProofChainStore>();
                 services.AddSingleton<OwnProofChainStore>();

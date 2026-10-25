@@ -1206,7 +1206,9 @@ version(1) flags(1) count(1) delay×10(1) inputs(1) armedSeconds(1) expiresUnixD
 
 **存储**：`data/config/slide-trigger/triggers.json`（宿主单例，临时文件 + `File.Move` 覆盖）。**不进 `settings.json`**：标记是每台机器的课堂配置、有自己的增删生命周期，混进主设置会让它出现在每次设置 diff 与策略投影里；它不含密钥也不含敏感信息（只有 id 与抽取参数），因此**不需要**从档案/云端备份中排除。
 
-**尚未实现**（下一层）：`GetLastInputInfo` 事件驱动采样、放映态判定、区域截图与 ZXing 解码、QRCoder 生成 PNG、设置页 UI。触发执行时必须**复用** `LinkageDrawCoordinator.AuthorizeAsync`（课程时段与集控锁）、`ISecurityService`（`LinkageAction`）、`RollCallDrawService`/`IDrawCommitService`（事务提交）与证明链，不得另开抽签路径；并且要先判断"这次触发会不会弹验证框"，会弹就放弃——否则老师翻到那页会撞上一个没人能输入的密码框。
+**尚未实现**（下一层）：`GetLastInputInfo` 事件驱动采样、放映态判定、区域截图与 ZXing 解码、临时热键与生成弹窗、桌面快捷方式。
+
+**已实现（本层）**：`settings.slideTrigger` 设置页（`Views/SettingsPages/SlideTrigger/`）——参数表单、生成并复制（QRCoder → `SetBitmapAsync` + `FlushAsync`）、另存 PNG、标记清单（复制/另存/删除）、滚动会话。页面**只在桌面分支注册**（与 `SlideTriggerStore`、`SlideTriggerMarkerImageService` 同处），因为手机宿主既没有这两个服务，也没有可抓的放映画面。页面不放 ViewModel：没有需要同步的共享状态，标记清单本身就是事实来源，再加一份 VM 只会多一个可能与磁盘不一致的副本。触发执行时必须**复用** `LinkageDrawCoordinator.AuthorizeAsync`（课程时段与集控锁）、`ISecurityService`（`LinkageAction`）、`RollCallDrawService`/`IDrawCommitService`（事务提交）与证明链，不得另开抽签路径；并且要先判断"这次触发会不会弹验证框"，会弹就放弃——否则老师翻到那页会撞上一个没人能输入的密码框。
 
 **安全边界（v1，必须说清）**：标记**没有签名**。任何能把这一页放到投影上的人都能在**任意一台**装了本应用的机器上触发，这与"绑机器"的设计正好相反——自包含是为了能在别的电脑上生效，代价就是不再有机器绑定。当前缓解有三条：同一会话内同 id 只触发一次、可选的过期日期、触发时界面明确显示是哪个标记。要真正防住"学生拍下这页提前显示"，需要非对称签名（老师电脑持私钥、教室机器持公钥）——那是比本功能更重的一套配对流程，未实现前应按**已知风险**对待。
 
