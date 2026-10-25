@@ -1173,3 +1173,33 @@
 
 ---
 
+## 44. 课件标记触发（第一层：参数、标记编解码、时机判定、存储）
+
+**目标**：让老师在任意课件里放一张标记，翻到那一页就自动点名——专门为**只用翻页笔**的场景（翻页笔只会发 PageUp/PageDown，点不了超链接、也点不了浮窗按钮）。
+
+| 文件 | 内容 |
+|---|---|
+| `SecRandom.Core/Models/SlideTrigger/SlideTriggerParameters.cs` | 参数集 + `Normalize()` 夹取范围 |
+| `SecRandom.Core/Models/SlideTrigger/SlideTriggerDefinition.cs` | 标记定义（id / 名称 / 参数 / 会话消费状态）+ `SlideTriggerId` 生成与校验 |
+| `SecRandom.Core/Services/SlideTrigger/SlideTriggerMarkerCodec.cs` | 标记文本编解码（`VRTRIG1:<id>`） |
+| `SecRandom.Core/Services/SlideTrigger/SlideTriggerScheduler.cs` | 纯函数：已武装的标记何时该触发 |
+| `SecRandom/Services/SlideTrigger/SlideTriggerStore.cs` | `data/config/slide-trigger/triggers.json`，原子替换，宿主单例 |
+
+**标记里只放 id，参数放在应用里**。三个理由：改「抽 1 人」→「抽 3 人」不必重新生成 PNG 再塞回 PPT；二维码矩阵小，从截图解码的可靠性大幅提高；以后要加抽奖目标或新参数，旧标记不用重做。
+
+**id 格式**：10 位 Crockford 风格字母表（去掉 `I/L/O/U`）+ 前缀 `VRTRIG1`。解析宽容（分隔符 `: . - _ / |` 与大小写都接受，也接受不带前缀的裸 id——投影裁切掉前缀像素时不应静默失效），但对 id 本身严格（定长 + 限定字母表），所以幻灯片上一句普通英文不会被误判成标记。
+
+**参数集**（按需求逐条）：抽取名单、抽取人数、是否可重复、是否忽略历史权重、侦测后多少秒自动触发、是否显示动画、是否启用语音、是否等下一次/第 N 次键鼠输入再触发、性别与分组限制。`AllowRepeat` 与 `IgnoreHistoryWeights` **拆成两个开关**：「不回避同一个人」和「不按历史加权」是两种课堂意图，忽略权重但仍遵守重复控制的组合是合法的。
+
+**时机判定**（`SlideTriggerScheduler`，纯函数）：`AfterDelay` 到点即触发；`AfterInputs` 等第 N 次输入，并受 `ArmedTimeoutSeconds` 约束——没有这个上限，第 12 页武装的标记会在二十分钟后因为一次无关点击而开抽，这是整个功能**唯一会被课堂立刻察觉**的失败模式。输入条件优先于超时（按键恰好落在窗口关闭那一刻，也应该抽）。
+
+**会话消费**：`LastConsumedSession` 记录在哪个会话抽过，`StartNewSession()` 只能手动调用——「这节课结束了」应用无从推断，自动重挂会让同一页在一节课里抽两次。
+
+**存储**：`data/config/slide-trigger/triggers.json`（宿主单例，临时文件 + `File.Move` 覆盖）。**不进 `settings.json`**：标记是每台机器的课堂配置、有自己的增删生命周期，混进主设置会让它出现在每次设置 diff 与策略投影里；它不含密钥也不含敏感信息（只有 id 与抽取参数），因此**不需要**从档案/云端备份中排除。
+
+**尚未实现**（下一层）：`GetLastInputInfo` 事件驱动采样、放映态判定、区域截图与 ZXing 解码、QRCoder 生成 PNG、设置页 UI。触发执行时必须**复用** `LinkageDrawCoordinator.AuthorizeAsync`（课程时段与集控锁）、`ISecurityService`（`LinkageAction`）、`RollCallDrawService`/`IDrawCommitService`（事务提交）与证明链，不得另开抽签路径；并且要先判断"这次触发会不会弹验证框"，会弹就放弃——否则老师翻到那页会撞上一个没人能输入的密码框。
+
+**安全边界（v1，必须说清）**：标记**没有签名**。任何能把这一页放到投影上的人都能触发；当前缓解是"单次消费 + 会话绑定 + 触发时界面明确显示是哪个标记"。要防"学生拍下这页提前显示"，需要每次会话签发 HMAC——`SlideTriggerParameters` 的字段可以随时加，标记格式（只带 id）不需要改。
+
+---
+
