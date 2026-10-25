@@ -21,15 +21,33 @@ namespace SecRandom.Views.MainPages;
 ///         the app as a floating card with no window is a worse trap than an extra click.
 ///     </para>
 ///     <para>
-///         The window is borderless, so it has no system frame to grab: both dragging and resizing are ours. Dragging
-///         accepts touch as well as a mouse button, and the eight resize grips are sized for fingertips rather than
-///         cursors, because this card is mostly used on a classroom touchscreen.
+///         <b>Two input paths, deliberately.</b> A mouse uses the platform's own <c>BeginMoveDrag</c>/<c>BeginResizeDrag</c>
+///         loops — that is what gives multi-monitor edge behaviour and the system drag feel. A <em>touch</em> contact
+///         cannot use them: those loops are mouse-shaped, so a finger press on the old code did nothing at all. Touch
+///         therefore moves and resizes by hand, which also makes it testable reasoning.
+///     </para>
+///     <para>
+///         <b>One pointer at a time.</b> The window crashed when a second finger landed during a drag: both presses
+///         entered the native move loop, and re-entering it is not a supported thing to do. Every entry point now checks
+///         <see cref="_manualPointer" /> first, so a second contact is ignored until the first is released.
 ///     </para>
 /// </remarks>
 public sealed partial class ResultMiniWindow : Window
 {
+    private const double FallbackMinimumWidth = 240;
+    private const double FallbackMinimumHeight = 220;
+
     private readonly Action _restore;
     private bool _allowClose;
+
+    /// <summary>The touch contact currently moving or resizing the window; null when nothing is being dragged.</summary>
+    private Pointer? _manualPointer;
+
+    private WindowEdge _manualEdge;
+    private bool _isManuallyResizing;
+    private Point _startPointer;
+    private PixelPoint _startPosition;
+    private Size _startSize;
 
     public ResultMiniWindow(RollCallPageViewModel viewModel, Action restore, double width, double height)
     {
@@ -45,6 +63,12 @@ public sealed partial class ResultMiniWindow : Window
         Closing += OnClosing;
 
         ConfigureResizeGrips();
+
+        // Capturing the pointer to the window makes every subsequent move/release land here, even when the finger
+        // slides off the card — which is exactly what a drag out to the edge of a large screen does.
+        PointerMoved += OnPointerMoved;
+        PointerReleased += OnPointerReleased;
+        PointerCaptureLost += OnPointerCaptureLost;
     }
 
     internal void AllowClose() => _allowClose = true;
@@ -63,32 +87,142 @@ public sealed partial class ResultMiniWindow : Window
     // 拖动沿用计时器小窗的做法：整块可拖动，但按在按钮上时交给按钮。
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (!IsPrimaryContact(e) || IsButtonDescendant(e.Source as Visual))
+        if (!IsPrimaryContact(e) || _manualPointer is not null || IsButtonDescendant(e.Source as Visual))
             return;
 
-        BeginMoveDrag(e);
+        if (e.Pointer.Type != PointerType.Touch)
+        {
+            // Mouse/pen: the platform loop is better than anything reimplemented here.
+            BeginMoveDrag(e);
+            return;
+        }
+
+        StartManualGesture(e, WindowEdge.West, isResizing: false);
     }
 
     /// <summary>
-    ///     One grip per window edge and corner, all going through the platform's own resize loop. Doing it natively
-    ///     instead of tracking pointer deltas keeps the drag smooth at any screen scale, and on a touchscreen it is
-    ///     what lets the OS keep resizing after the finger has left the grip.
+    ///     One grip per window edge and corner. A mouse uses the platform's resize loop; a touch contact resizes by hand
+    ///     for the same reason it moves by hand.
     /// </summary>
     private void ResizeGrip_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (sender is not Control { Tag: string edgeName } || !IsPrimaryContact(e))
             return;
 
+        // The second-finger case that used to crash the window: re-entering a resize loop is not allowed.
+        if (_manualPointer is not null)
+            return;
+
         if (!Enum.TryParse<WindowEdge>(edgeName, out var edge))
             return;
 
         e.Handled = true;
-        BeginResizeDrag(edge, e);
+
+        if (e.Pointer.Type != PointerType.Touch)
+        {
+            BeginResizeDrag(edge, e);
+            return;
+        }
+
+        StartManualGesture(e, edge, isResizing: true);
+    }
+
+    private void StartManualGesture(PointerPressedEventArgs e, WindowEdge edge, bool isResizing)
+    {
+        _manualPointer = e.Pointer;
+        _manualEdge = edge;
+        _isManuallyResizing = isResizing;
+        _startPointer = e.GetPosition(this);
+        _startPosition = Position;
+        _startSize = new Size(Width, Height);
+
+        e.Pointer.Capture(this);
+        e.Handled = true;
+    }
+
+    private void OnPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_manualPointer is null || !ReferenceEquals(e.Pointer, _manualPointer))
+            return;
+
+        var scaling = RenderScaling <= 0 ? 1 : RenderScaling;
+        var pointer = e.GetPosition(this);
+        var deltaX = (pointer.X - _startPointer.X) * scaling;
+        var deltaY = (pointer.Y - _startPointer.Y) * scaling;
+
+        if (_isManuallyResizing)
+            ApplyManualResize(deltaX, deltaY);
+        else
+            Position = new PixelPoint(
+                _startPosition.X + (int)Math.Round(deltaX),
+                _startPosition.Y + (int)Math.Round(deltaY));
+
+        e.Handled = true;
     }
 
     /// <summary>
-    ///     A finger press reports no "left button", so the old mouse-only check silently disabled dragging on the very
-    ///     screens this card is made for. Touch contacts are accepted as primary contacts instead.
+    ///     Applies the drag to whichever sides the grab belongs to. Pulling a west or north edge has to move the window
+    ///     as well as grow it, otherwise the edge being dragged stays put and the card slides instead.
+    /// </summary>
+    private void ApplyManualResize(double deltaX, double deltaY)
+    {
+        var minimumWidth = MinWidth > 0 ? MinWidth : FallbackMinimumWidth;
+        var minimumHeight = MinHeight > 0 ? MinHeight : FallbackMinimumHeight;
+
+        var width = _startSize.Width;
+        var height = _startSize.Height;
+        var x = _startPosition.X;
+        var y = _startPosition.Y;
+
+        var edge = _manualEdge;
+
+        if (edge is WindowEdge.East or WindowEdge.NorthEast or WindowEdge.SouthEast)
+            width = Math.Max(minimumWidth, _startSize.Width + deltaX);
+        else if (edge is WindowEdge.West or WindowEdge.NorthWest or WindowEdge.SouthWest)
+        {
+            var adjusted = Math.Max(minimumWidth, _startSize.Width - deltaX);
+            x = _startPosition.X + (int)Math.Round(_startSize.Width - adjusted);
+            width = adjusted;
+        }
+
+        if (edge is WindowEdge.South or WindowEdge.SouthWest or WindowEdge.SouthEast)
+            height = Math.Max(minimumHeight, _startSize.Height + deltaY);
+        else if (edge is WindowEdge.North or WindowEdge.NorthWest or WindowEdge.NorthEast)
+        {
+            var adjusted = Math.Max(minimumHeight, _startSize.Height - deltaY);
+            y = _startPosition.Y + (int)Math.Round(_startSize.Height - adjusted);
+            height = adjusted;
+        }
+
+        Width = width;
+        Height = height;
+        Position = new PixelPoint(x, y);
+    }
+
+    private void OnPointerReleased(object? sender, PointerEventArgs e)
+    {
+        if (_manualPointer is null || !ReferenceEquals(e.Pointer, _manualPointer))
+            return;
+
+        e.Pointer.Capture(null);
+        ClearManualGesture();
+    }
+
+    /// <summary>
+    ///     Capture can also be lost without a release — another window activating is enough. Leaving the drag state set
+    ///     would make the card permanently un-draggable until restart, so it is cleared here as well.
+    /// </summary>
+    private void OnPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e) => ClearManualGesture();
+
+    private void ClearManualGesture()
+    {
+        _manualPointer = null;
+        _isManuallyResizing = false;
+    }
+
+    /// <summary>
+    ///     A finger press reports no "left button", so a mouse-only check silently disabled every gesture on the very
+    ///     screens this card is made for.
     /// </summary>
     private bool IsPrimaryContact(PointerPressedEventArgs e) =>
         e.Pointer.Type == PointerType.Touch
