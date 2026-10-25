@@ -20,6 +20,8 @@ public sealed class PlatformServiceRootStub : IPlatformServiceRoot, IWindowFeatu
 
     public IForegroundWindowService ForegroundWindow => UnsupportedForegroundWindowService.Instance;
 
+    public ISlideTriggerScreenProbe ScreenProbe => UnsupportedSlideTriggerScreenProbe.Instance;
+
     public IRemovableStorageBindingMarker RemovableStorageBindingMarker =>
         PortableRemovableStorageBindingMarker.Instance;
 

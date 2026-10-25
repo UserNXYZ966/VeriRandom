@@ -34,6 +34,8 @@ public sealed class MobilePlatformServiceRoot : IPlatformServiceRoot, IWindowFea
 
     public PlatformCapabilities Capabilities { get; }
 
+    public ISlideTriggerScreenProbe ScreenProbe => SecRandom.Platforms.UnsupportedSlideTriggerScreenProbe.Instance;
+
     /// <summary>
     /// Platform heads inject their update installer here before PlatformStartupContext.Set runs.
     /// </summary>
