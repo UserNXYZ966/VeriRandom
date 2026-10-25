@@ -14,7 +14,8 @@ namespace SecRandom.Services.SlideTrigger;
 public sealed record SlideTriggerDetection(
     SlideTriggerPayloadResult Payload,
     DateTimeOffset DetectedAt,
-    bool AlreadyUsedThisSession);
+    bool AlreadyUsedThisSession,
+    SlideTriggerExecution? Execution = null);
 
 /// <summary>
 ///     Watches the projected slide and decodes a courseware marker when the teacher turns to one.
@@ -51,6 +52,7 @@ public sealed class SlideTriggerWatcher : IDisposable
 
     private readonly ISlideTriggerScreenProbe _probe;
     private readonly SlideTriggerScreenDecoder _decoder;
+    private readonly SlideTriggerExecutor _executor;
     private readonly SlideTriggerStore _store;
     private readonly MainConfigHandler _configHandler;
     private readonly ILogger<SlideTriggerWatcher> _logger;
@@ -64,12 +66,14 @@ public sealed class SlideTriggerWatcher : IDisposable
     public SlideTriggerWatcher(
         IPlatformServiceRoot platform,
         SlideTriggerScreenDecoder decoder,
+        SlideTriggerExecutor executor,
         SlideTriggerStore store,
         MainConfigHandler configHandler,
         ILogger<SlideTriggerWatcher> logger)
     {
         _probe = platform.ScreenProbe;
         _decoder = decoder;
+        _executor = executor;
         _store = store;
         _configHandler = configHandler;
         _logger = logger;
@@ -182,22 +186,32 @@ public sealed class SlideTriggerWatcher : IDisposable
                 var definition = _store.Find(payload.Id);
                 var alreadyUsed = definition?.IsConsumedIn(_store.Session) ?? false;
 
+                SlideTriggerExecution? execution = null;
+
                 if (!alreadyUsed)
                 {
-                    // Consumption is recorded immediately: a crash right after this must not let the same slide fire
-                    // twice when the app comes back.
-                    if (definition is not null)
-                        _store.MarkConsumed(definition, DateTimeOffset.Now);
+                    execution = await _executor.ExecuteAsync(parameters).ConfigureAwait(false);
+
+                    if (execution.Code == SlideTriggerExecutionCode.Succeeded)
+                    {
+                        // Consumption is recorded only after a real draw: a trigger refused by the gate or by an
+                        // unsupported parameter must stay usable once the teacher fixes the cause.
+                        if (definition is not null)
+                            _store.MarkConsumed(definition, DateTimeOffset.Now);
+
+                        ShowResult();
+                    }
 
                     _logger.LogInformation(
-                        "检测到课件标记 {Id}：{Count} 人，名单 {List}，时机 {Timing}",
+                        "课件标记 {Id}：{Count} 人，名单 {List}，时机 {Timing}，执行 {Code}",
                         payload.Id,
                         parameters.Count,
                         parameters.StudentListName ?? "(当前名单)",
-                        parameters.Timing);
+                        parameters.Timing,
+                        execution.Code);
                 }
 
-                MarkerDetected?.Invoke(this, new SlideTriggerDetection(payload, detectedAt, alreadyUsed));
+                MarkerDetected?.Invoke(this, new SlideTriggerDetection(payload, detectedAt, alreadyUsed, execution));
                 return;
             }
         }
@@ -210,6 +224,15 @@ public sealed class SlideTriggerWatcher : IDisposable
             Interlocked.Exchange(ref _bursting, 0);
         }
     }
+
+    /// <summary>
+    ///     Puts the draw on screen. The teacher is looking at the presentation at this moment, so a status line inside
+    ///     this application's settings page is invisible to them — the existing topmost result card is the feedback that
+    ///     actually reaches the room.
+    /// </summary>
+    private static void ShowResult() =>
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            Core.Abstraction.IAppHost.TryGetService<ViewEngine.ResultMiniWindowService>()?.Show());
 
     public void Dispose() => _timer.Dispose();
 }
