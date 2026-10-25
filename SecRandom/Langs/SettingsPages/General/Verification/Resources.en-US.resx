@@ -178,4 +178,35 @@ It prevents replacement of local draw code, random seeds, or result files during
   <data name="M_RawProofsNone" xml:space="preserve"><value>No random-number records yet</value></data>
   <data name="M_RawProofsAllValidFormat" xml:space="preserve"><value>All {0} random-number records recomputed successfully; chain head index {1}</value></data>
   <data name="M_RawProofsSomeInvalidFormat" xml:space="preserve"><value>{0} record(s) failed recomputation, do not use them: {1}</value></data>
+  <data name="S_ProofDetails" xml:space="preserve"><value>Proof details</value></data>
+  <data name="C_ProofDetails" xml:space="preserve"><value>Details</value></data>
+  <data name="M_ProofDetailsNotice" xml:space="preserve"><value>Everything below is what the proof file itself claims, not a result checked on this machine; judge it together with the evidence grader and the replay result</value></data>
+  <data name="M_ProofDetailsUnreadable" xml:space="preserve"><value>This proof file could not be read</value></data>
+  <data name="C_ProofDetail_ProofId" xml:space="preserve"><value>Proof ID</value></data>
+  <data name="C_ProofDetail_Mode" xml:space="preserve"><value>Proof type</value></data>
+  <data name="C_ProofDetail_Algorithm" xml:space="preserve"><value>Algorithm</value></data>
+  <data name="C_ProofDetail_Engine" xml:space="preserve"><value>Algorithm engine version</value></data>
+  <data name="C_ProofDetail_FrameVersion" xml:space="preserve"><value>Request frame version</value></data>
+  <data name="C_ProofDetail_PoolRule" xml:space="preserve"><value>Pool rule</value></data>
+  <data name="C_ProofDetail_Sampling" xml:space="preserve"><value>Sampling</value></data>
+  <data name="C_ProofDetail_Count" xml:space="preserve"><value>Draw count</value></data>
+  <data name="C_ProofDetail_Candidates" xml:space="preserve"><value>Anonymous candidates</value></data>
+  <data name="C_ProofDetail_GapApplied" xml:space="preserve"><value>Average gap protection</value></data>
+  <data name="C_ProofDetail_GapThreshold" xml:space="preserve"><value>Average gap threshold</value></data>
+  <data name="C_ProofDetail_BatchSize" xml:space="preserve"><value>Batch size</value></data>
+  <data name="C_ProofDetail_ShareDebtPersonal" xml:space="preserve"><value>Personal share-debt horizon</value></data>
+  <data name="C_ProofDetail_ShareDebtDimension" xml:space="preserve"><value>Dimension share-debt horizon</value></data>
+  <data name="C_ProofDetail_ShareDebtFloor" xml:space="preserve"><value>Share-debt random floor</value></data>
+  <data name="C_ProofDetail_InputCommitment" xml:space="preserve"><value>Input commitment</value></data>
+  <data name="C_ProofDetail_AuditCommitment" xml:space="preserve"><value>Audit commitment</value></data>
+  <data name="C_ProofDetail_Seed" xml:space="preserve"><value>Random material</value></data>
+  <data name="C_ProofDetail_ServerReceipt" xml:space="preserve"><value>Server signature</value></data>
+  <data name="M_ProofDetail_ModeOffline" xml:space="preserve"><value>Ordinary mode: locally replayable proof</value></data>
+  <data name="M_ProofDetail_ModeOnline" xml:space="preserve"><value>Formal notarization: server witness lock</value></data>
+  <data name="M_ProofDetail_SamplingFair" xml:space="preserve"><value>History-balanced weighting, no replacement</value></data>
+  <data name="M_ProofDetail_SamplingUniform" xml:space="preserve"><value>Equal probability, no replacement</value></data>
+  <data name="M_ProofDetail_GapAppliedFormat" xml:space="preserve"><value>Applied ({0}/{1} anonymous candidates)</value></data>
+  <data name="M_ProofDetail_GapNotApplied" xml:space="preserve"><value>Not applied</value></data>
+  <data name="M_ProofDetail_ReceiptPresent" xml:space="preserve"><value>Confirmed</value></data>
+  <data name="M_ProofDetail_ReceiptAbsent" xml:space="preserve"><value>Not confirmed</value></data>
 </root>

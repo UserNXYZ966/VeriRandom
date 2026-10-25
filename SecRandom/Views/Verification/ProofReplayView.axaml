@@ -84,6 +84,12 @@
                             IsEnabled="False"
                             Content="{x:Static lv:Resources.C_ProofReplay_Run}"
                             Click="Replay_OnClick" />
+                    <!-- 详情只复述文件里写了什么；它不判断可信度，那是下面证据打分器的事 -->
+                    <Button x:Name="DetailsButton"
+                            HorizontalAlignment="Stretch"
+                            IsEnabled="False"
+                            Content="{x:Static lv:Resources.C_ProofDetails}"
+                            Click="Details_OnClick" />
                     <TextBlock x:Name="ReplayStatusText" FontWeight="SemiBold" TextWrapping="Wrap" />
                     <TextBlock x:Name="ReplayDetailText" FontSize="12" TextWrapping="Wrap"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />

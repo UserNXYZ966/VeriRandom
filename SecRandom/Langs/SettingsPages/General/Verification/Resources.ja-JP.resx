@@ -178,4 +178,35 @@
   <data name="M_RawProofsNone" xml:space="preserve"><value>乱数記録はまだありません</value></data>
   <data name="M_RawProofsAllValidFormat" xml:space="preserve"><value>乱数記録 {0} 件はすべて再計算に成功しました。チェーン末尾の番号は {1} です</value></data>
   <data name="M_RawProofsSomeInvalidFormat" xml:space="preserve"><value>{0} 件の記録が再計算に失敗しました。これらの記録は使わないでください：{1}</value></data>
+  <data name="S_ProofDetails" xml:space="preserve"><value>証明の詳細</value></data>
+  <data name="C_ProofDetails" xml:space="preserve"><value>詳細</value></data>
+  <data name="M_ProofDetailsNotice" xml:space="preserve"><value>以下はすべて証明ファイル自身が主張している内容で、本機で確認した結論ではありません。「証明の信頼度」の評価と再現結果と併せて判断してください</value></data>
+  <data name="M_ProofDetailsUnreadable" xml:space="preserve"><value>この証明ファイルを読み込めませんでした</value></data>
+  <data name="C_ProofDetail_ProofId" xml:space="preserve"><value>証明 ID</value></data>
+  <data name="C_ProofDetail_Mode" xml:space="preserve"><value>証明の種類</value></data>
+  <data name="C_ProofDetail_Algorithm" xml:space="preserve"><value>アルゴリズム</value></data>
+  <data name="C_ProofDetail_Engine" xml:space="preserve"><value>アルゴリズムエンジンのバージョン</value></data>
+  <data name="C_ProofDetail_FrameVersion" xml:space="preserve"><value>リクエストフレームの版</value></data>
+  <data name="C_ProofDetail_PoolRule" xml:space="preserve"><value>候補プールの規則</value></data>
+  <data name="C_ProofDetail_Sampling" xml:space="preserve"><value>抽出方式</value></data>
+  <data name="C_ProofDetail_Count" xml:space="preserve"><value>抽選数</value></data>
+  <data name="C_ProofDetail_Candidates" xml:space="preserve"><value>匿名候補数</value></data>
+  <data name="C_ProofDetail_GapApplied" xml:space="preserve"><value>平均間隔の保護</value></data>
+  <data name="C_ProofDetail_GapThreshold" xml:space="preserve"><value>平均間隔のしきい値</value></data>
+  <data name="C_ProofDetail_BatchSize" xml:space="preserve"><value>バッチ抽選規模</value></data>
+  <data name="C_ProofDetail_ShareDebtPersonal" xml:space="preserve"><value>個人 share-debt horizon</value></data>
+  <data name="C_ProofDetail_ShareDebtDimension" xml:space="preserve"><value>次元 share-debt horizon</value></data>
+  <data name="C_ProofDetail_ShareDebtFloor" xml:space="preserve"><value>share-debt のランダム下限</value></data>
+  <data name="C_ProofDetail_InputCommitment" xml:space="preserve"><value>入力コミットメント</value></data>
+  <data name="C_ProofDetail_AuditCommitment" xml:space="preserve"><value>監査コミットメント</value></data>
+  <data name="C_ProofDetail_Seed" xml:space="preserve"><value>乱数材料</value></data>
+  <data name="C_ProofDetail_ServerReceipt" xml:space="preserve"><value>サーバー署名</value></data>
+  <data name="M_ProofDetail_ModeOffline" xml:space="preserve"><value>通常モード：ローカルで再現可能な証明</value></data>
+  <data name="M_ProofDetail_ModeOnline" xml:space="preserve"><value>正式公証：サーバー側の立会いロック</value></data>
+  <data name="M_ProofDetail_SamplingFair" xml:space="preserve"><value>履歴公平な重み付け・非復元</value></data>
+  <data name="M_ProofDetail_SamplingUniform" xml:space="preserve"><value>等確率・非復元</value></data>
+  <data name="M_ProofDetail_GapAppliedFormat" xml:space="preserve"><value>適用済み（匿名候補 {0}/{1}）</value></data>
+  <data name="M_ProofDetail_GapNotApplied" xml:space="preserve"><value>未適用</value></data>
+  <data name="M_ProofDetail_ReceiptPresent" xml:space="preserve"><value>確認済み</value></data>
+  <data name="M_ProofDetail_ReceiptAbsent" xml:space="preserve"><value>未確認</value></data>
 </root>

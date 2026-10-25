@@ -70,6 +70,7 @@ public sealed partial class ProofReplayView : ViewBase
         ReplayButton.IsEnabled = false;
         UseCurrentRosterButton.IsEnabled = false;
         AssessTrustButton.IsEnabled = false;
+        DetailsButton.IsEnabled = false;
         SelectedTitleText.Text = LR.M_ProofReplay_SelectHint;
         SelectedDetailText.Text = string.Empty;
     }
@@ -101,6 +102,111 @@ public sealed partial class ProofReplayView : ViewBase
     ///     校验 `data/proofs/raw` 下的全部裸随机数记录：用每条记录自带的熵源原文重算种子与结果，并复核它自己那条链。
     ///     这些记录**不**出现在上面的链画布上——它们没有候选池，抽签内核无法重放，混进去只会被当成"链有缺口"。
     /// </summary>
+    /// <summary>
+    ///     Shows what the proof file itself declares. Deliberately not a verdict: every row below is a claim the file
+    ///     makes, and only the replay plus the evidence grader can say whether to believe it — which is why the notice
+    ///     sits at the top of the dialog instead of in a footnote.
+    /// </summary>
+    private async void Details_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_selected is null)
+            return;
+
+        var details = _replayService.TryBuildDetails(_selected.Path);
+        if (details is null)
+        {
+            ReplayDetailText.Text = LR.M_ProofDetailsUnreadable;
+            return;
+        }
+
+        if (TopLevel.GetTopLevel(this) is not Window owner)
+            return;
+
+        var rows = new StackPanel { Spacing = 5, Margin = new Thickness(16) };
+
+        rows.Children.Add(new TextBlock
+        {
+            Text = LR.M_ProofDetailsNotice,
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap,
+            Opacity = 0.8,
+            Margin = new Thickness(0, 0, 0, 8)
+        });
+
+        void AddRow(string label, string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return;
+
+            rows.Children.Add(new TextBlock
+            {
+                Text = $"{label}：{value}",
+                FontSize = 12,
+                TextWrapping = TextWrapping.Wrap
+            });
+        }
+
+        var fairness = details.Audit?.Fairness;
+
+        AddRow(LR.C_ProofDetail_ProofId, details.ProofId.ToString());
+        AddRow(LR.C_ProofDetail_Mode, details.Mode == VerificationProofMode.OfflineReproducible
+            ? LR.M_ProofDetail_ModeOffline
+            : LR.M_ProofDetail_ModeOnline);
+        AddRow(LR.C_ProofDetail_Algorithm, details.AlgorithmId);
+        AddRow(LR.C_ProofDetail_Engine, details.EngineVersion);
+        AddRow(LR.C_ProofDetail_FrameVersion,
+            details.RequestFrameVersion.ToString(CultureInfo.InvariantCulture));
+        AddRow(LR.C_ProofDetail_PoolRule, fairness?.AlgorithmProfile);
+        AddRow(LR.C_ProofDetail_Sampling, fairness is null
+            ? null
+            : fairness.FairDraw ? LR.M_ProofDetail_SamplingFair : LR.M_ProofDetail_SamplingUniform);
+        AddRow(LR.C_ProofDetail_Count, details.RequestedCount.ToString(CultureInfo.InvariantCulture));
+        AddRow(LR.C_ProofDetail_Candidates, details.CandidateCount.ToString(CultureInfo.InvariantCulture));
+
+        if (fairness is not null)
+        {
+            AddRow(LR.C_ProofDetail_GapApplied, fairness.AverageGapProtectionApplied
+                ? string.Format(
+                    CultureInfo.InvariantCulture,
+                    LR.M_ProofDetail_GapAppliedFormat,
+                    fairness.CandidateCountAfterAverageGapProtection,
+                    fairness.CandidateCountBeforeAverageGapProtection)
+                : LR.M_ProofDetail_GapNotApplied);
+            AddRow(LR.C_ProofDetail_GapThreshold,
+                fairness.AverageGapProtectionThreshold.ToString(CultureInfo.InvariantCulture));
+            AddRow(LR.C_ProofDetail_BatchSize, fairness.BatchSize.ToString(CultureInfo.InvariantCulture));
+            AddRow(LR.C_ProofDetail_ShareDebtPersonal,
+                fairness.ShareDebtPersonalHorizonRounds.ToString("0.###", CultureInfo.InvariantCulture));
+            AddRow(LR.C_ProofDetail_ShareDebtDimension,
+                fairness.ShareDebtDimensionHorizonPerPick.ToString("0.###", CultureInfo.InvariantCulture));
+            AddRow(LR.C_ProofDetail_ShareDebtFloor,
+                fairness.ShareDebtRandomFloor.ToString("0.###", CultureInfo.InvariantCulture));
+        }
+
+        AddRow(LR.C_ProofDetail_InputCommitment, details.InputHashBase64Url);
+        AddRow(LR.C_ProofDetail_AuditCommitment, details.AuditHashBase64Url);
+        AddRow(LR.C_ProofDetail_Seed, details.SeedBase64Url);
+        AddRow(LR.C_ProofDetail_ServerReceipt, details.HasServerReceipt
+            ? LR.M_ProofDetail_ReceiptPresent
+            : LR.M_ProofDetail_ReceiptAbsent);
+
+        var dialog = new Window
+        {
+            Title = LR.S_ProofDetails,
+            Width = 560,
+            Height = 560,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            ShowInTaskbar = false,
+            Content = new ScrollViewer
+            {
+                VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
+                Content = rows
+            }
+        };
+
+        await dialog.ShowDialog(owner);
+    }
+
     private void VerifyRawProofs_OnClick(object? sender, RoutedEventArgs e)
     {
         var service = Core.Abstraction.IAppHost.TryGetService<RawNumberProofService>();
@@ -202,6 +308,7 @@ public sealed partial class ProofReplayView : ViewBase
         ReplayStatusText.Text = string.Empty;
         ReplayDetailText.Text = string.Empty;
         AssessTrustButton.IsEnabled = true;
+        DetailsButton.IsEnabled = true;
         TrustResultText.Text = string.Empty;
     }
 

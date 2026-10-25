@@ -256,4 +256,35 @@
   <data name="M_RawProofsNone" xml:space="preserve"><value>还没有随机数记录</value></data>
   <data name="M_RawProofsAllValidFormat" xml:space="preserve"><value>{0} 条随机数记录全部重算通过，链尾序号 {1}</value></data>
   <data name="M_RawProofsSomeInvalidFormat" xml:space="preserve"><value>{0} 条记录未能重算通过，请勿使用这些记录：{1}</value></data>
+  <data name="S_ProofDetails" xml:space="preserve"><value>证明详细信息</value></data>
+  <data name="C_ProofDetails" xml:space="preserve"><value>详细信息</value></data>
+  <data name="M_ProofDetailsNotice" xml:space="preserve"><value>以下内容均为证明文件自身宣称的信息，不是本机复核的结论；请结合「证明可信度」的证据打分与重放结果一起判断</value></data>
+  <data name="M_ProofDetailsUnreadable" xml:space="preserve"><value>无法读取这份证明文件</value></data>
+  <data name="C_ProofDetail_ProofId" xml:space="preserve"><value>证明 ID</value></data>
+  <data name="C_ProofDetail_Mode" xml:space="preserve"><value>证明类型</value></data>
+  <data name="C_ProofDetail_Algorithm" xml:space="preserve"><value>算法</value></data>
+  <data name="C_ProofDetail_Engine" xml:space="preserve"><value>算法引擎版本</value></data>
+  <data name="C_ProofDetail_FrameVersion" xml:space="preserve"><value>请求帧版本</value></data>
+  <data name="C_ProofDetail_PoolRule" xml:space="preserve"><value>候选池规则</value></data>
+  <data name="C_ProofDetail_Sampling" xml:space="preserve"><value>抽样策略</value></data>
+  <data name="C_ProofDetail_Count" xml:space="preserve"><value>抽取数量</value></data>
+  <data name="C_ProofDetail_Candidates" xml:space="preserve"><value>匿名候选数</value></data>
+  <data name="C_ProofDetail_GapApplied" xml:space="preserve"><value>平均差距保护</value></data>
+  <data name="C_ProofDetail_GapThreshold" xml:space="preserve"><value>平均差距保护阈值</value></data>
+  <data name="C_ProofDetail_BatchSize" xml:space="preserve"><value>批量抽取规模</value></data>
+  <data name="C_ProofDetail_ShareDebtPersonal" xml:space="preserve"><value>个人 share-debt horizon</value></data>
+  <data name="C_ProofDetail_ShareDebtDimension" xml:space="preserve"><value>维度 share-debt horizon</value></data>
+  <data name="C_ProofDetail_ShareDebtFloor" xml:space="preserve"><value>share-debt 随机下限</value></data>
+  <data name="C_ProofDetail_InputCommitment" xml:space="preserve"><value>输入承诺</value></data>
+  <data name="C_ProofDetail_AuditCommitment" xml:space="preserve"><value>审计承诺</value></data>
+  <data name="C_ProofDetail_Seed" xml:space="preserve"><value>随机材料</value></data>
+  <data name="C_ProofDetail_ServerReceipt" xml:space="preserve"><value>服务端签名</value></data>
+  <data name="M_ProofDetail_ModeOffline" xml:space="preserve"><value>普通模式：本地可重放证明</value></data>
+  <data name="M_ProofDetail_ModeOnline" xml:space="preserve"><value>正式公证：服务端见证锁</value></data>
+  <data name="M_ProofDetail_SamplingFair" xml:space="preserve"><value>历史公平加权无放回</value></data>
+  <data name="M_ProofDetail_SamplingUniform" xml:space="preserve"><value>等概率无放回</value></data>
+  <data name="M_ProofDetail_GapAppliedFormat" xml:space="preserve"><value>已应用（{0}/{1} 个匿名候选）</value></data>
+  <data name="M_ProofDetail_GapNotApplied" xml:space="preserve"><value>未应用</value></data>
+  <data name="M_ProofDetail_ReceiptPresent" xml:space="preserve"><value>已确认</value></data>
+  <data name="M_ProofDetail_ReceiptAbsent" xml:space="preserve"><value>未确认</value></data>
 </root>

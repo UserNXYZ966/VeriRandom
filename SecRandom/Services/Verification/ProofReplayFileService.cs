@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using SecRandom.Core.Abstraction;
@@ -130,6 +131,62 @@ public sealed class ProofReplayFileService(
         return Directory.Exists(rootDirectory)
             ? Directory.EnumerateFiles(rootDirectory, "*.srproof.json", SearchOption.AllDirectories)
             : [];
+    }
+
+    /// <summary>
+    ///     Re-reads one proof file into the values the details dialog shows. Re-read rather than carried on
+    ///     <see cref="ProofReplayNode" />: the node deliberately holds only what replay needs, and widening it for a
+    ///     dialog that is opened far less often would make every list load pay for it.
+    /// </summary>
+    public ProofDetails? TryBuildDetails(string path)
+    {
+        if (!proofExporter.TryRead(path, out var proof) || proof is null)
+        {
+            logger.LogWarning("证明详情：无法读取证明文件 {Path}", path);
+            return null;
+        }
+
+        var auditBytes = string.IsNullOrWhiteSpace(proof.AuditPayload)
+            ? []
+            : AnonymizedAuditPayload.DecodeBase64Url(proof.AuditPayload);
+
+        var audit = auditBytes.Length == 0 ? null : AnonymizedAuditPayload.TryParse(auditBytes);
+
+        // The audit commitment the public verifier displays is a hash of those bytes, not a stored field; hashing it
+        // here is what keeps this view honest instead of restating a value nothing wrote down.
+        var auditHash = auditBytes.Length == 0
+            ? string.Empty
+            : AnonymizedAuditPayload.EncodeBase64Url(SHA256.HashData(auditBytes));
+
+        var seed = string.Empty;
+        var requestedCount = 0;
+        var candidateCount = 0;
+
+        if (!string.IsNullOrWhiteSpace(proof.Payload))
+        {
+            var payloadBytes = AnonymizedAuditPayload.DecodeBase64Url(proof.Payload);
+
+            if (VerificationWireCodec.TryDecodeProofPayload(payloadBytes, out var input, out var decodedSeed, out _))
+            {
+                seed = AnonymizedAuditPayload.EncodeBase64Url(decodedSeed);
+                requestedCount = input.Count;
+                candidateCount = input.Candidates.Count;
+            }
+        }
+
+        return new ProofDetails(
+            proof.ProofId,
+            proof.Mode,
+            proof.AlgorithmId,
+            proof.AlgorithmEngineVersion,
+            VerificationWireCodec.RequestFormatVersion,
+            proof.InputHash,
+            auditHash,
+            seed,
+            !string.IsNullOrWhiteSpace(proof.Witness?.Receipt),
+            requestedCount,
+            candidateCount,
+            audit);
     }
 
     /// <summary>
