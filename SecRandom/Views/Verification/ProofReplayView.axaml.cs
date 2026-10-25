@@ -128,7 +128,7 @@ public sealed partial class ProofReplayView : ViewBase
         {
             Text = LR.M_ProofDetailsNotice,
             FontSize = 12,
-            TextWrapping = TextWrapping.Wrap,
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
             Opacity = 0.8,
             Margin = new Thickness(0, 0, 0, 8)
         });
@@ -142,7 +142,7 @@ public sealed partial class ProofReplayView : ViewBase
             {
                 Text = $"{label}：{value}",
                 FontSize = 12,
-                TextWrapping = TextWrapping.Wrap
+                TextWrapping = Avalonia.Media.TextWrapping.Wrap
             });
         }
 
