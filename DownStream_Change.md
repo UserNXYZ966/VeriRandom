@@ -1181,13 +1181,22 @@
 |---|---|
 | `SecRandom.Core/Models/SlideTrigger/SlideTriggerParameters.cs` | 参数集 + `Normalize()` 夹取范围 |
 | `SecRandom.Core/Models/SlideTrigger/SlideTriggerDefinition.cs` | 标记定义（id / 名称 / 参数 / 会话消费状态）+ `SlideTriggerId` 生成与校验 |
-| `SecRandom.Core/Services/SlideTrigger/SlideTriggerMarkerCodec.cs` | 标记文本编解码（`VRTRIG1:<id>`） |
+| `SecRandom.Core/Services/SlideTrigger/SlideTriggerPayload.cs` | 自包含标记载荷的二进制编解码（`VRT1:<base64url>`），参数全部在二维码里 |
 | `SecRandom.Core/Services/SlideTrigger/SlideTriggerScheduler.cs` | 纯函数：已武装的标记何时该触发 |
 | `SecRandom/Services/SlideTrigger/SlideTriggerStore.cs` | `data/config/slide-trigger/triggers.json`，原子替换，宿主单例 |
 
-**标记里只放 id，参数放在应用里**。三个理由：改「抽 1 人」→「抽 3 人」不必重新生成 PNG 再塞回 PPT；二维码矩阵小，从截图解码的可靠性大幅提高；以后要加抽奖目标或新参数，旧标记不用重做。
+**参数随二维码走，不存在本机**。课件是老师在**自己的电脑**上做的（而且往往不是上课那台），只在课堂机器上放 id、让 id 去查本机配置，会让标记在它自己的出生地以外**完全失效**。因此载荷自包含：
 
-**id 格式**：10 位 Crockford 风格字母表（去掉 `I/L/O/U`）+ 前缀 `VRTRIG1`。解析宽容（分隔符 `: . - _ / |` 与大小写都接受，也接受不带前缀的裸 id——投影裁切掉前缀像素时不应静默失效），但对 id 本身严格（定长 + 限定字母表），所以幻灯片上一句普通英文不会被误判成标记。
+```
+version(1) flags(1) count(1) delay×10(1) inputs(1) armedSeconds(1) expiresUnixDays(4) id(8)
++ 三个长度前缀 UTF-8 串：名单 / 性别 / 分组（长度 0 表示不限制）
+```
+
+**用二进制而不是 JSON**：同样的内容用 JSON 是 300–400 字符，二维码矩阵会被推到投影+截图难以稳定解码的尺寸；打包后带头部只有 18 字节，带上名单与分组约 50 字节，矩阵小而密。
+
+**解码端把所有值重新 `Normalize()`**：标记是"从屏幕上读下来的数据"，不是本进程写出来的，范围必须重新夹一遍。失败按原因分类（不是标记 / 版本不支持 / 损坏 / 已过期），因为"截图里没有标记"是常态，必须便宜地拒掉。
+
+**id 格式**：8 字节随机 → 13 位 Crockford 风格字符（去掉 `I/L/O/U`）。13 位恰好是 64 bit 的 base32 长度（4 + 12×5）。id 只承担"这节课这一页抽过了就不再抽"，不再是查表键。
 
 **参数集**（按需求逐条）：抽取名单、抽取人数、是否可重复、是否忽略历史权重、侦测后多少秒自动触发、是否显示动画、是否启用语音、是否等下一次/第 N 次键鼠输入再触发、性别与分组限制。`AllowRepeat` 与 `IgnoreHistoryWeights` **拆成两个开关**：「不回避同一个人」和「不按历史加权」是两种课堂意图，忽略权重但仍遵守重复控制的组合是合法的。
 
@@ -1199,7 +1208,9 @@
 
 **尚未实现**（下一层）：`GetLastInputInfo` 事件驱动采样、放映态判定、区域截图与 ZXing 解码、QRCoder 生成 PNG、设置页 UI。触发执行时必须**复用** `LinkageDrawCoordinator.AuthorizeAsync`（课程时段与集控锁）、`ISecurityService`（`LinkageAction`）、`RollCallDrawService`/`IDrawCommitService`（事务提交）与证明链，不得另开抽签路径；并且要先判断"这次触发会不会弹验证框"，会弹就放弃——否则老师翻到那页会撞上一个没人能输入的密码框。
 
-**安全边界（v1，必须说清）**：标记**没有签名**。任何能把这一页放到投影上的人都能触发；当前缓解是"单次消费 + 会话绑定 + 触发时界面明确显示是哪个标记"。要防"学生拍下这页提前显示"，需要每次会话签发 HMAC——`SlideTriggerParameters` 的字段可以随时加，标记格式（只带 id）不需要改。
+**安全边界（v1，必须说清）**：标记**没有签名**。任何能把这一页放到投影上的人都能在**任意一台**装了本应用的机器上触发，这与"绑机器"的设计正好相反——自包含是为了能在别的电脑上生效，代价就是不再有机器绑定。当前缓解有三条：同一会话内同 id 只触发一次、可选的过期日期、触发时界面明确显示是哪个标记。要真正防住"学生拍下这页提前显示"，需要非对称签名（老师电脑持私钥、教室机器持公钥）——那是比本功能更重的一套配对流程，未实现前应按**已知风险**对待。
+
+**已生成标记留一份本地清单**（`MarkerText` + 参数 + 过期时间）：清单**不是**触发器的事实来源，只是让设置页能重新导出 PNG、并回答"我这份课件里到底放的是什么"。改参数会重新编码 `MarkerText`，此时 PPT 里那张旧图不会自己变——页面必须提示"需要重新导出并替换"。
 
 ---
 

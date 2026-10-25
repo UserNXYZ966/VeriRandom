@@ -1,4 +1,5 @@
 using System;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace SecRandom.Core.Models.SlideTrigger;
@@ -23,6 +24,16 @@ public sealed class SlideTriggerDefinition
 
     public SlideTriggerParameters Parameters { get; set; } = new();
 
+    /// <summary>
+    ///     The exact text that was drawn as a QR code for this marker. Kept so the settings page can re-export the PNG
+    ///     without re-encoding, and so "what is actually in my deck" has one authoritative answer. It is the marker,
+    ///     not the parameters, that the app fires on — editing the parameters here must therefore also regenerate this.
+    /// </summary>
+    public string MarkerText { get; set; } = string.Empty;
+
+    /// <summary>Date after which the marker is refused; null means it never expires.</summary>
+    public DateTimeOffset? ExpiresAt { get; set; }
+
     /// <summary>Session in which this marker last fired; null means it has never fired.</summary>
     public string? LastConsumedSession { get; set; }
 
@@ -44,16 +55,58 @@ public sealed class SlideTriggerDefinition
 ///     The id written into a marker image.
 /// </summary>
 /// <remarks>
-///     Ten Crockford-style characters: no <c>I</c>/<c>L</c>/<c>O</c>/<c>U</c>, so a misread is impossible rather than
-///     merely unlikely once the text has been through a QR round trip and a human's eyes. Sixty bits is far more than
-///     a classroom deck needs and keeps the marker matrix small.
+///     Eight random bytes rendered as thirteen Crockford-style characters: no <c>I</c>/<c>L</c>/<c>O</c>/<c>U</c>, so a
+///     misread is impossible rather than merely unlikely once the text has been through a QR round trip. Eight bytes is
+///     what the packed payload reserves for it, and thirteen characters is exactly how 64 bits fit in base 32.
 /// </remarks>
 public static class SlideTriggerId
 {
     private const string Alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
-    private const int IdLength = 10;
+    private const int IdLength = 13;
+    private const int ByteCount = 8;
 
-    public static string New() => FromBytes(Guid.NewGuid().ToByteArray());
+    public static string New() => FromBytes(RandomNumberGenerator.GetBytes(ByteCount));
+
+    public static string FromBytes(byte[] bytes)
+    {
+        ArgumentNullException.ThrowIfNull(bytes);
+        if (bytes.Length != ByteCount)
+            throw new ArgumentException($"A slide trigger id needs exactly {ByteCount} bytes.", nameof(bytes));
+
+        ulong value = 0;
+        foreach (var item in bytes)
+            value = (value << 8) | item;
+
+        var builder = new StringBuilder(IdLength);
+
+        // 13 characters cover 4 + 12 × 5 = 64 bits exactly, so the first character carries the high nibble.
+        builder.Append(Alphabet[(int)((value >> 60) & 0xF)]);
+        for (var shift = 55; shift >= 0; shift -= 5)
+            builder.Append(Alphabet[(int)((value >> shift) & 0x1F)]);
+
+        return builder.ToString();
+    }
+
+    public static byte[] ToBytes(string id)
+    {
+        if (!IsValid(id))
+            throw new ArgumentException($"'{id}' is not a slide trigger id.", nameof(id));
+
+        var normalized = id.ToUpperInvariant();
+        ulong value = (ulong)Alphabet.IndexOf(normalized[0]);
+
+        for (var index = 1; index < normalized.Length; index++)
+            value = (value << 5) | (uint)Alphabet.IndexOf(normalized[index]);
+
+        var bytes = new byte[ByteCount];
+        for (var index = ByteCount - 1; index >= 0; index--)
+        {
+            bytes[index] = (byte)(value & 0xFF);
+            value >>= 8;
+        }
+
+        return bytes;
+    }
 
     public static bool IsValid(string? value)
     {
@@ -65,31 +118,5 @@ public static class SlideTriggerId
                 return false;
 
         return true;
-    }
-
-    private static string FromBytes(byte[] bytes)
-    {
-        var builder = new StringBuilder(IdLength);
-
-        // 5 bits per character, taken from the leading bytes; 60 bits is all we need and the rest is discarded.
-        var buffer = 0;
-        var bits = 0;
-
-        foreach (var value in bytes)
-        {
-            buffer = (buffer << 8) | value;
-            bits += 8;
-
-            while (bits >= 5 && builder.Length < IdLength)
-            {
-                bits -= 5;
-                builder.Append(Alphabet[(buffer >> bits) & 0x1F]);
-            }
-
-            if (builder.Length == IdLength)
-                break;
-        }
-
-        return builder.ToString();
     }
 }

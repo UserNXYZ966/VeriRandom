@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using SecRandom.Core.Models.SlideTrigger;
+using SecRandom.Core.Services.SlideTrigger;
 using SecRandom.Shared;
 
 namespace SecRandom.Services.SlideTrigger;
@@ -43,14 +44,19 @@ public sealed class SlideTriggerStore(ILogger<SlideTriggerStore> logger)
     public SlideTriggerDefinition? Find(string id) =>
         Catalog.Triggers.FirstOrDefault(trigger => string.Equals(trigger.Id, id, StringComparison.Ordinal));
 
-    public SlideTriggerDefinition Create(string name, SlideTriggerParameters parameters)
+    public SlideTriggerDefinition Create(string name, SlideTriggerParameters parameters, DateTimeOffset? expiresAt)
     {
+        var id = SlideTriggerId.New();
+        var normalized = (parameters ?? new SlideTriggerParameters()).Normalize();
+
         var definition = new SlideTriggerDefinition
         {
-            Id = SlideTriggerId.New(),
+            Id = id,
             Name = string.IsNullOrWhiteSpace(name) ? "未命名标记" : name.Trim(),
             CreatedAt = DateTimeOffset.UtcNow,
-            Parameters = (parameters ?? new SlideTriggerParameters()).Normalize()
+            Parameters = normalized,
+            ExpiresAt = expiresAt,
+            MarkerText = SlideTriggerPayload.Encode(normalized, id, expiresAt)
         };
 
         Catalog.Triggers.Add(definition);
@@ -59,8 +65,9 @@ public sealed class SlideTriggerStore(ILogger<SlideTriggerStore> logger)
     }
 
     /// <summary>
-    ///     Applies an edited definition. Parameters are re-normalized here rather than at every call site, so a page
-    ///     cannot persist an out-of-range count by forgetting to validate.
+    ///     Applies an edited definition and re-encodes its marker text. Parameters are re-normalized here rather than at
+    ///     every call site, so a page cannot persist an out-of-range count by forgetting to validate. The id stays the
+    ///     same, which is what keeps the per-session consumption record meaningful across edits.
     /// </summary>
     public void Update(SlideTriggerDefinition definition)
     {
@@ -72,6 +79,12 @@ public sealed class SlideTriggerStore(ILogger<SlideTriggerStore> logger)
 
         existing.Name = string.IsNullOrWhiteSpace(definition.Name) ? existing.Name : definition.Name.Trim();
         existing.Parameters = (definition.Parameters ?? existing.Parameters).Normalize();
+        existing.ExpiresAt = definition.ExpiresAt;
+
+        // The deck still holds the old PNG until the teacher replaces it; re-encoding here is what makes this record
+        // say what the *new* marker would contain, and the page must therefore offer to export it again.
+        existing.MarkerText = SlideTriggerPayload.Encode(existing.Parameters, existing.Id, existing.ExpiresAt);
+
         Save();
     }
 
