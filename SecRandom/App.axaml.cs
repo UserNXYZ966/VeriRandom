@@ -1204,6 +1204,7 @@ public partial class App : Application
                     // 结果浮窗同样是桌面窗口：它和主窗口互斥显示，手机/平板不注册（按钮本身也不显示）。
                     services.AddSingleton<ResultMiniWindowService>();
                     services.AddSingleton<SlideTriggerStore>();
+                    services.AddSingleton<SlideTriggerMarkerImageService>();
                 }
                 services.AddSingleton<ProofChainStore>();
                 services.AddSingleton<OwnProofChainStore>();
