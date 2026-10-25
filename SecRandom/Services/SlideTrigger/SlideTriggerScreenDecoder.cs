@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using SecRandom.Core.Services.SlideTrigger;
 using SecRandom.Platforms.Abstractions;
 using ZXing;
+using ZXing.Common;
 
 namespace SecRandom.Services.SlideTrigger;
 
